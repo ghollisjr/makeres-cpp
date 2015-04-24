@@ -11,5 +11,9 @@
   :components ((:file "package")
                ;; makeres transformation stuff
                (:file "cpptrans")
-               ;; C++ code compilation & generation stuff
-               (:file "cppcode")))
+               ;; C++ code compilation & generation utilities
+               (:file "utils")
+               ;; Control structures
+               (:file "control")
+               ;; Math functions and operators
+               (:file "math")))

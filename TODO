@@ -1,0 +1,5 @@
++ Add significant subset of the basic C++ operators and types
+
++ Add header management which defines the operators supplied by each
+  header so that includes can be calculated by the terms used in the
+  program.
