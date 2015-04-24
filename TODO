@@ -3,3 +3,5 @@
 + Add header management which defines the operators supplied by each
   header so that includes can be calculated by the terms used in the
   program.
+
++ Add copyright information to code and the COPYRIGHT file for GPL
