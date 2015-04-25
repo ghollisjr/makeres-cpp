@@ -51,3 +51,13 @@
       (format out "else {~%")
       (format out "~a;~%" (cpp expr))
       (format out "}~%"))))
+
+;; Transliteration of C++ for
+(defcpp for (init test incr &body body)
+  (with-output-to-string (out)
+    (format out "for(~a; ~a; ~a) {~%"
+            (cpp init) (cpp test) (cpp incr))
+    (loop
+       for expr in body
+       do (format out "~a;~%" (cpp expr)))
+    (format out "}~%")))

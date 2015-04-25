@@ -13,6 +13,8 @@
                (:file "cpptrans")
                ;; C++ code compilation & generation utilities
                (:file "utils")
+               ;; Variable handling
+               (:file "var")
                ;; Control structures
                (:file "control")
                ;; Math functions and operators
