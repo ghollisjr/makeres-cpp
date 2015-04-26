@@ -17,7 +17,7 @@ Parentheses are automatically placed around arguments to ensure that
 order of operations are represented as they are in the abstract syntax
 tree.
 
-A let* operator is provided as well which creates a sub context with
+A let operator is provided as well which creates a sub context with
 braces {,} and declares/defines C++ variables.
 
 Types must be used for all variables and functions.  Types come before
