@@ -47,4 +47,6 @@
                ;; Standard library functions
                (:file "std")
                ;; Math functions and operators
-               (:file "math")))
+               (:file "math")
+               ;; Code generation, compilation & execution
+               (:file "exe")))

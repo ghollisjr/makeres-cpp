@@ -11,11 +11,11 @@
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; General Public License for more details.
-;;;; 
+;;;;
 ;;;; You should have received a copy of the GNU General Public License
 ;;;; along with makeres-cpp.  If not, see
 ;;;; <http://www.gnu.org/licenses/>.
-;;;; 
+;;;;
 ;;;; You may contact Gary Hollis (me!) via email at
 ;;;; ghollisjr@gmail.com
 
@@ -38,3 +38,22 @@
     (format t "Required headers: ~a~%" (required-headers main))
     (format t "C++ Code:~%~a~%" (cpp main)))
   nil)
+
+(defun progtest (&optional (n 1000000))
+  (exe "/home/ghollisjr/test/exe"
+       ((function int main ((var int argc)
+                            (var (pointer (pointer char)) argv))
+                  (var long n (atoi (aref argv 1)))
+                  (var (type long long) sum 0)
+                  (var int count 0)
+                  (for (var long i 0) (< i n) (incf i)
+                       (setf sum
+                             (+ sum i))
+                       (incf count))
+                  (<< cout
+                      (/ (typecast float sum)
+                         (typecast float count))
+                      endl)))
+       :flags '("-O3")
+       :arguments (list (lisp->cpp n))
+       :output *standard-output*))

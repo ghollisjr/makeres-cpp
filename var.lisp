@@ -25,7 +25,7 @@
   (with-output-to-string (out)
     (format out "~a ~a" (cpp type) (cpp name))
     (when value
-      (format out " = ~a" value))))
+      (format out " = ~a" (cpp value)))))
 
 ;; Returns a type which requires many type-tokens
 (defcpp type (&rest type-tokens)

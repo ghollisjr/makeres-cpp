@@ -1,6 +1,6 @@
 ;;;; makeres-cpp is a Common Lisp data analysis library.
 ;;;; Copyright 2015 Gary Hollis
-;;;; 
+;;;;
 ;;;; This file is part of makeres-cpp.
 ;;;;
 ;;;; makeres-cpp is free software: you can redistribute it and/or
@@ -117,3 +117,48 @@ compile and link flags needed for your C++ compiler."
                             (list (gethash f cpp->header))))))
                  result)))
       (rec form))))
+
+(defun required-cheaders (form)
+  "Returns the list of required cheaders for a form"
+  (let ((cpp->cheader (generate-cpp->cheader)))
+    (labels ((rec (f)
+               (let ((result nil))
+                 (cond
+                   ((null f)
+                    nil)
+                   ((listp f)
+                    (let ((sub-results (mapcar #'rec f)))
+                      (loop
+                         for i in sub-results
+                         when i
+                         do (setf result
+                                  (mapcar #'car
+                                          (compress
+                                           (append result
+                                                   i)
+                                           :test #'equal
+                                           :singleton-pairs t))))))
+                   ((atom f)
+                    (when (gethash f cpp->cheader)
+                      (setf result
+                            (list (gethash f cpp->cheader))))))
+                 result)))
+      (rec form))))
+
+(defun compile-flags (cpp)
+  "Returns all compilation flags required by code form cpp"
+  (let ((headers (required-headers cpp))
+        (cheaders (required-cheaders cpp)))
+    (format nil "~{~a~^ ~}"
+            (remove ""
+                    (append (mapcar (lambda (h)
+                                      (destructuring-bind (&key flags provided)
+                                          (gethash h *headers*)
+                                        flags))
+                                    headers)
+                            (mapcar (lambda (ch)
+                                      (destructuring-bind (&key flags provided)
+                                          (gethash ch *cheaders*)
+                                        flags))
+                                    cheaders))
+                    :test #'equal))))

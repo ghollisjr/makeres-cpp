@@ -65,3 +65,24 @@
     (format out "~a->~a"
             (cpp pointer)
             (cpp member))))
+
+;; Assignment (didn't know exactly where to place this)
+(defcpp setf (place value)
+  (with-output-to-string (out)
+    (format out "~a = ~a"
+            (cpp place)
+            (cpp value))))
+
+;; type casting
+(defcpp typecast (type val)
+  (with-output-to-string (out)
+    (format out "((~a) ~a)"
+            (cpp type)
+            (cpp val))))
+
+;; Array referencing (operator[])
+(defcpp aref (array &rest indices)
+  (with-output-to-string (out)
+    (format out "~a~{[~a]~}"
+            (cpp array)
+            (mapcar #'cpp indices))))

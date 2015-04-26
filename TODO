@@ -1,6 +1,17 @@
-+ Add significant subset of the basic C++ operators and types
++ Extraction of results from executed program.
 
-+ Add header management which defines the operators supplied by each
+  This requires formatted output of results to files; e.g. mapping
+  results to files and vice versa externally to the program.
+
++ Execution of compiled program via external-program:run
+
++ Compilation of source code via external-program:run
+
++ Full program source code generation to file
+
++ Significant subset of the basic C++ operators and types
+
+- Header management which defines the operators supplied by each
   header so that includes can be calculated by the terms used in the
   program.
 

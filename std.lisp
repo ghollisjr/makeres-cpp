@@ -67,8 +67,16 @@
 (defstdobj ofstream)
 (defstdobj fstream)
 
+;;;; Strings
+
 (defheader "string"
     (;; string type
      string))
 
 (defstdobj string)
+
+;;;; Standard lib from C
+(defheader "cstdlib"
+    (;; reading numbers from c-strings
+     atoi
+     atof))

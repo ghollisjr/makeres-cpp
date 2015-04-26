@@ -40,6 +40,12 @@
   (with-output-to-string (out)
     (format out "(~{~a~^/~})" (mapcar #'cpp forms))))
 
+(defcpp incf (var)
+  (format nil "(++~a)" (cpp var)))
+
+(defcpp decf (var)
+  (format nil "(--~a)" (cpp var)))
+
 ;;;; Comparison functions:
 
 (macrolet ((defboolop (sym &optional str)
