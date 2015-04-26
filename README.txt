@@ -1,8 +1,8 @@
 makeres-cpp allows cl-ana's makeres to generate C++ code for efficient
-data analysis.  There are cases where the cost of forcing Lisp to be
-efficient enough for a task is too high in computer time, programmer
-time, or both.  makeres-cpp thus gives makeres the ability to generate
-C++ code in such cases.
+data analysis.  There are cases where Lisp can be too expensive in
+computer time, programmer time, or both.  makeres-cpp thus gives
+makeres the ability to generate C++ code in such cases using more
+Lisp-like conventions.
 
 C++ code is represented via its abstract syntax tree with each
 operator or function being applied with Lisp syntax (operator at front
@@ -24,3 +24,7 @@ Types must be used for all variables and functions.  Types come before
 variables in any applicable operators; since they are required whereas
 declared values are not, this is one area where C/C++ syntax is
 properly optimized.
+
+WARNING: At the moment, this library assumes GCC as the compiler;
+doing otherwise makes this project much more complicated than is
+reasonable for the author's current situation.

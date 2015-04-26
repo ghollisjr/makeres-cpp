@@ -11,9 +11,11 @@
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; General Public License for more details.
+;;;; 
 ;;;; You should have received a copy of the GNU General Public License
 ;;;; along with makeres-cpp.  If not, see
 ;;;; <http://www.gnu.org/licenses/>.
+;;;; 
 ;;;; You may contact Gary Hollis (me!) via email at
 ;;;; ghollisjr@gmail.com
 
@@ -76,6 +78,16 @@
   (with-output-to-string (out)
     (format out "for(~a; ~a; ~a) {~%"
             (cpp init) (cpp test) (cpp incr))
+    (loop
+       for expr in body
+       do (format out "~a;~%" (cpp expr)))
+    (format out "}~%")))
+
+;; Same for while
+(defcpp while (test &body body)
+  (with-output-to-string (out)
+    (format out "while(~a) {~%"
+            (cpp test))
     (loop
        for expr in body
        do (format out "~a;~%" (cpp expr)))

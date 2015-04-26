@@ -11,9 +11,11 @@
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; General Public License for more details.
+;;;;
 ;;;; You should have received a copy of the GNU General Public License
 ;;;; along with makeres-cpp.  If not, see
 ;;;; <http://www.gnu.org/licenses/>.
+;;;;
 ;;;; You may contact Gary Hollis (me!) via email at
 ;;;; ghollisjr@gmail.com
 
@@ -28,13 +30,21 @@
                #:external-program
                #:alexandria)
   :components ((:file "package")
-               ;; makeres transformation stuff
-               (:file "cpptrans")
                ;; C++ code compilation & generation utilities
                (:file "utils")
+               ;; makeres transformation stuff
+               (:file "cpptrans")
+               ;; Syntactic structures
+               (:file "syntax")
+               ;; Headers
+               (:file "headers")
                ;; Variable handling
                (:file "var")
                ;; Control structures
                (:file "control")
+               ;; Boolean operators
+               (:file "bool")
+               ;; Standard library functions
+               (:file "std")
                ;; Math functions and operators
                (:file "math")))

@@ -1,6 +1,6 @@
 ;;;; makeres-cpp is a Common Lisp data analysis library.
 ;;;; Copyright 2015 Gary Hollis
-;;;; 
+;;;;
 ;;;; This file is part of makeres-cpp.
 ;;;;
 ;;;; makeres-cpp is free software: you can redistribute it and/or
@@ -11,25 +11,27 @@
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; General Public License for more details.
-;;;; 
+;;;;
 ;;;; You should have received a copy of the GNU General Public License
 ;;;; along with makeres-cpp.  If not, see
 ;;;; <http://www.gnu.org/licenses/>.
-;;;; 
+;;;;
 ;;;; You may contact Gary Hollis (me!) via email at
 ;;;; ghollisjr@gmail.com
 
-(defpackage #:makeres-cpp
-  (:use :cl
-        :external-program)
-  (:export
-   ;; C++ transformation for makeres
-   :cpptrans
-   ;; define a C++ program
-   :defprog
-   :defprog-fn
+(in-package :makeres-cpp)
 
-   ;; define C++ library
-   :deflib))
+(defcpp and (&rest expressions)
+  (with-output-to-string (out)
+    (format out "(~{~a~^~( && ~)~})"
+            (mapcar #'cpp expressions))))
 
-(cl-ana.package-utils:use-package-group :cl-ana :makeres-cpp)
+(defcpp or (&rest expressions)
+  (with-output-to-string (out)
+    (format out "(~{~a~^~( || ~)~})"
+            (mapcar #'cpp expressions))))
+
+(defcpp not (expression)
+  (with-output-to-string (out)
+    (format out "(! (~a))"
+            (cpp expression))))

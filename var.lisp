@@ -11,9 +11,11 @@
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; General Public License for more details.
+;;;; 
 ;;;; You should have received a copy of the GNU General Public License
 ;;;; along with makeres-cpp.  If not, see
 ;;;; <http://www.gnu.org/licenses/>.
+;;;; 
 ;;;; You may contact Gary Hollis (me!) via email at
 ;;;; ghollisjr@gmail.com
 
@@ -23,8 +25,7 @@
   (with-output-to-string (out)
     (format out "~a ~a" (cpp type) (cpp name))
     (when value
-      (format out " = ~a" value))
-    (format out ";~%")))
+      (format out " = ~a" value))))
 
 ;; Returns a type which requires many type-tokens
 (defcpp type (&rest type-tokens)

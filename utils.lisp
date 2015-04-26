@@ -11,9 +11,11 @@
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; General Public License for more details.
+;;;; 
 ;;;; You should have received a copy of the GNU General Public License
 ;;;; along with makeres-cpp.  If not, see
 ;;;; <http://www.gnu.org/licenses/>.
+;;;; 
 ;;;; You may contact Gary Hollis (me!) via email at
 ;;;; ghollisjr@gmail.com
 
@@ -74,14 +76,47 @@ supplied to the lambda operator."
   "Looks up either 1. Form if form is an atom, or 2. First element of
 form if form is a list in the operator table *proj->cpp* and calls the
 function mapped there with no arguments for atoms or the remaining
-arguments in the form for lists."
+arguments in the form for lists.  If there is no defined operator
+corresponding to the first element of the list, standard function call
+notation is assumed and the symbol is downcased as a string for the
+function name."
   (when form
     (let ((sym->fn (gethash *project-id* *proj->cpp*)))
       (if (atom form)
           (aif (gethash form sym->fn)
                (funcall it)
-               (string-downcase (mkstr form)))
+               (if (stringp form)
+                   form
+                   (string-downcase (mkstr form))))
           (aif (gethash (first form) sym->fn)
-               (apply (gethash (first form) sym->fn)
+               (apply it
                       (rest form))
-               (error "cpp: ~a not found in operator table" (first form)))))))
+               (format nil "~a(~{~a~^,~})"
+                       (string-downcase (string (first form)))
+                       (mapcar #'cpp (rest form))))))))
+
+(defgeneric lisp->cpp (lisp-object &rest args)
+  (:documentation "Generates a C++ string for the Lisp object.  args
+  can be used along with side effects to ensure that the C++ string is
+  sensible.")
+  (:method ((x float) &rest args)
+    (map 'string
+         (lambda (char)
+           (if (or (char= char #\d)
+                   (char= char #\f))
+               #\e
+               char))
+         (format nil "~e" x)))
+  (:method ((x integer) &rest args)
+    (format nil "~d" x))
+  (:method ((x string) &rest args)
+    (with-output-to-string (out)
+      (format out "\"")
+      (loop
+         for char across x
+         do (if (char= char #\Newline)
+                (format out "\\n")
+                (format out "~a" char)))
+      (format out "\"")))
+  (:method (x &rest args)
+    (format nil "~a" x)))
