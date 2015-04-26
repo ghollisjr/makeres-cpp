@@ -3,11 +3,11 @@
   This requires formatted output of results to files; e.g. mapping
   results to files and vice versa externally to the program.
 
-+ Execution of compiled program via external-program:run
+- Execution of compiled program via external-program:run
 
-+ Compilation of source code via external-program:run
+- Compilation of source code via external-program:run
 
-+ Full program source code generation to file
+- Full program source code generation to file
 
 + Significant subset of the basic C++ operators and types
 
