@@ -27,43 +27,73 @@
 (defparameter *cheaders*
   (make-hash-table :test 'equal))
 
-(defun defheader-fn (fname provided
+(defun defheader-fn (fnames provided
                      &key
                        flags)
-  "Defines a C++ header by its filename fname, the C++ objects it
-provides, and the flags necessary for compiling and linking.
+  "Defines a C++ header or set of headers by its filename(s) fnames,
+the C++ objects it provides, and the flags necessary for compiling and
+linking.
 
 flags must be a string of compile & link flags for your C++ compiler."
-  (setf (gethash fname *headers*)
+  (setf (gethash fnames *headers*)
         (list :provided provided
               :flags (if flags
                          flags
                          ""))))
 
-(defmacro defheader (fname provided
+(defmacro defheader (fnames provided
                      &key
                        flags)
   "Macro version of defheader-fn"
-  `(defheader-fn ',fname ',provided
+  `(defheader-fn ',fnames ',provided
      ,@(when flags `(:flags ,flags))))
 
-(defun defcheader-fn (fname provided
+(defmacro with-defheader (fnames defcpps
+                          &key
+                            additional
+                            flags)
+  "Defines a C header as well as executing the defcpp forms"
+  (let ((provided
+         (append additional
+                 (mapcar #'second defcpps))))
+    `(progn
+       (defheader ,fnames ,provided
+         ,@(when flags
+                 (list :flags flags)))
+       ,@defcpps)))
+
+(defun defcheader-fn (fnames provided
                       &key
                         flags)
-  "Defines C header by its file name, the provided C objects, and the
-compile and link flags needed for your C++ compiler."
-  (setf (gethash fname *cheaders*)
+  "Defines C header or list of headers by its file name(s), the
+provided C objects, and the compile and link flags needed for your C++
+compiler."
+  (setf (gethash fnames *cheaders*)
         (list :provided provided
               :flags (if flags
                          flags
                          ""))))
 
-(defmacro defcheader (fname provided
+(defmacro defcheader (fnames provided
                       &key
                         flags)
   "Macro version of defcheader-fn"
-  `(defcheader-fn ',fname ',provided
+  `(defcheader-fn ',fnames ',provided
      ,@(when flags `(:flags ,flags))))
+
+(defmacro with-defcheader (fnames defcpps
+                           &key
+                             additional
+                             flags)
+  "Defines a C header as well as executing the defcpp forms"
+  (let ((provided
+         (append additional
+                 (mapcar #'second defcpps))))
+    `(progn
+       (defcheader ,fnames ,provided
+         ,@(when flags
+                 (list :flags flags)))
+       ,@defcpps)))
 
 (defun generate-cpp->header ()
   "Returns map from cpp to header for that cpp symbol"

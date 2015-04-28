@@ -4,6 +4,10 @@ computer time, programmer time, or both.  makeres-cpp thus gives
 makeres the ability to generate C++ code in such cases using more
 Lisp-like conventions.
 
+ROOT (from CERN) TTrees and HDF5 dataset support are included, as well
+as operators allowing computation with makeres analogous to
+cl-ana.makeres-table with pass-merging, logical tables & fields, etc.
+
 C++ code is represented via its abstract syntax tree with each
 operator or function being applied with Lisp syntax (operator at front
 of list, arguments follow), but with symbols directly representing the

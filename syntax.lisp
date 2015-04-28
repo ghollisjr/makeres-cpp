@@ -39,7 +39,7 @@
 ;; call method on object
 (defcpp method (object method &rest arguments)
   (with-output-to-string (out)
-    (format out "~a.~a(~{~a~^,~})"
+    (format out "(~a).~a(~{~a~^,~})"
             (cpp object)
             (cpp method)
             (mapcar #'cpp arguments))))
@@ -47,14 +47,14 @@
 ;; access member of object
 (defcpp member (object member)
   (with-output-to-string (out)
-    (format out "~a.~a"
+    (format out "(~a).~a"
             (cpp object)
             (cpp member))))
 
 ;; call method on object pointed to
 (defcpp pmethod (pointer method &rest arguments)
   (with-output-to-string (out)
-    (format out "~a->~a(~{~a~^,~})"
+    (format out "(~a)->~a(~{~a~^,~})"
             (cpp pointer)
             (cpp method)
             (mapcar #'cpp arguments))))
@@ -62,7 +62,7 @@
 ;; access member on object pointed to
 (defcpp pmember (pointer member)
   (with-output-to-string (out)
-    (format out "~a->~a"
+    (format out "(~a)->~a"
             (cpp pointer)
             (cpp member))))
 
@@ -86,3 +86,10 @@
     (format out "~a~{[~a]~}"
             (cpp array)
             (mapcar #'cpp indices))))
+
+;; Function returns:
+(defcpp return (&optional val)
+  (with-output-to-string (out)
+    (format out "return")
+    (when val
+      (format out " (~a)" (cpp val)))))

@@ -30,10 +30,19 @@
                #:external-program
                #:alexandria)
   :components ((:file "package")
-               ;; C++ code compilation & generation utilities
+               ;; Fundamental C++ code compilation & generation
+               ;; utilities
                (:file "utils")
-               ;; makeres transformation stuff
-               (:file "cpptrans")
+               ;; C++ function definition
+               (:file "function")
+
+               ;; Commented until I get these parts working
+               
+               ;; ;; C++ table operators
+               ;; (:file "cpp-table-operators")
+               ;; ;; makeres transformation stuff
+               ;; (:file "cpptrans")
+               
                ;; Syntactic structures
                (:file "syntax")
                ;; Headers
@@ -49,4 +58,10 @@
                ;; Math functions and operators
                (:file "math")
                ;; Code generation, compilation & execution
-               (:file "exe")))
+               (:file "exe")
+
+               ;; HDF5
+               (:file "hdf")
+               ;; ROOT
+               (:file "root")
+               ))

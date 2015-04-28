@@ -1,0 +1,16 @@
+defcpp defines a C++ token.  A single token can only be used as an
+operator, function, the name of a variable, type, constant, or
+class/struct member/method.
+
+defcpp for functions and operators should include a lambda list
+specifying how to handle the arguments.
+
+defcpp for any other C++ object should have an empty lambda list and
+simply return the string version of the C++ object.
+
+By default (i.e. no defcpp for token), strings return themselves, and
+symbols and other objects are converted to strings via mkstr and
+downcased.
+
+eq is used for C++ token comparison, so packages of symbols matter
+(e.g. keyword symbols can be distinct from other tokens).

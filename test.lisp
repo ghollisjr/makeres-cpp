@@ -57,3 +57,35 @@
        :flags '("-O3")
        :arguments (list (lisp->cpp n))
        :output *standard-output*))
+
+(defcppfun void makeres_cpp_test
+    ((var int x)
+     (var float y))
+  (<< cout x "\" \"" y endl))
+
+(defun progtest2 ()
+  (exe "/home/ghollisjr/test/exe2"
+       ((function int main ((var int argc)
+                            (var (pointer (pointer char)) argv))
+                  (makeres_cpp_test 1 2)))
+       :flags '("-O3")
+       :output *standard-output*))
+
+(defun roottest1 ()
+  (exe "/home/ghollisjr/test/roottest1"
+       ((function int main ((var int argc)
+                            (var (pointer (pointer char)) argv))
+                  (var (pointer th1d)
+                       h
+                       (new th1d
+                            "\"hist\""
+                            "\"hist\""
+                            100
+                            -3
+                            3))
+                  (var trandom3 gen)
+                  (for (var int i 0) (< i 1000) (incf i)
+                       (pmethod h fill
+                                (method gen gaus 0 1)))
+                  (<< cout (pmethod h entries) endl)))
+       :output *standard-output*))

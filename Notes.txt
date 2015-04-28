@@ -1,0 +1,17 @@
+* Lisp conversion to C++ works ok for things representable as strings,
+  but for e.g. histograms it might be better to have them available in
+  files.  Modifying makeres & logres to automatically log results once
+  they're computed might need to be done prior to finishing
+  makeres-cpp.  This way results will be available in a standard
+  format for makeres-cpp to access.
+
+  1. ROOT histograms will be used for C++ histogram support, reading
+     and writing of ROOT histograms from HDF5 files will be necessary,
+
+  2. ROOT histograms come in 4 flavors: TH1, TH2, TH3, and sparse (no
+     one should use THn without being sparse)
+
+  3. C++ needs to know which type of histogram to use, so the Lisp
+     forms for the C++ must support encoding this information via
+     checking the dimensionality of required histograms and using this
+     information to generate the ROOT histogram type.

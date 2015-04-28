@@ -1,6 +1,6 @@
 ;;;; makeres-cpp is a Common Lisp data analysis library.
 ;;;; Copyright 2015 Gary Hollis
-;;;; 
+;;;;
 ;;;; This file is part of makeres-cpp.
 ;;;;
 ;;;; makeres-cpp is free software: you can redistribute it and/or
@@ -11,11 +11,11 @@
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; General Public License for more details.
-;;;; 
+;;;;
 ;;;; You should have received a copy of the GNU General Public License
 ;;;; along with makeres-cpp.  If not, see
 ;;;; <http://www.gnu.org/licenses/>.
-;;;; 
+;;;;
 ;;;; You may contact Gary Hollis (me!) via email at
 ;;;; ghollisjr@gmail.com
 
@@ -29,14 +29,24 @@
 
 ;; Returns a type which requires many type-tokens
 (defcpp type (&rest type-tokens)
-  (with-output-to-string (out)
-    (format out "~{~a~^ ~}"
-            (mapcar #'cpp type-tokens))))
+  (format nil "~{~a~^ ~}"
+          (mapcar #'cpp type-tokens)))
 
 ;; Returns the pointer type for a given type
 (defcpp pointer (type)
-  (with-output-to-string (out)
-    (format out "~a*" (cpp type))))
+  (format nil "~a*" (cpp type)))
+
+;; Returns the reference type for a given type
+(defcpp reference (type)
+  (format nil "~a&" (cpp type)))
+
+;; Returns address of variable
+(defcpp address (var)
+  (format nil "&(~a)" (cpp var)))
+
+;; Returns value pointed to by pointer
+(defcpp value (pointer)
+  (format nil "*(~a)" (cpp pointer)))
 
 (defcpp new (type-or-constructor &rest args)
   (with-output-to-string (out)

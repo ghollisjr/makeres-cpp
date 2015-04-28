@@ -1,7 +1,46 @@
++ cpp-gsym function which generates unique C++ symbols in much the
+  same way that gensym does for Lisp.  Only needs to generate unique
+  symbols in the context of a single program, so for readability it
+  shouldn't just keep making newer and newer symbols, only as many as
+  it needs.
+
+  Could also simply return a function which would generate unique
+  symbols for use in a single compilation.
+
++ Reading & writing ROOT histograms from/to HDF5 files.
+
+  There are two options:
+
+  1. C++ code, so makeres-cpp will have a C++ component which will
+     need to be compiled and potentially installed.
+
+  2. Generate the code for doing this when the C++ code is compiled.
+     This would entail overhead in compilation time and potentially
+     needing to support more of C++ than is absolutely necessary for
+     the benefit of not having to install C++ libraries to use
+     makeres-cpp.
+
+  Going with 2 for now.
+
++ Support inclusion of C++ code blocks in addition to headers.  This
+  allows libraries of C++ code to be written in Lisp-like C++ and then
+  included in programs automatically whenever they are referenced.
+
++ Remove duplicate compilation flags in the case of multiple identical
+  compile flags being required by different headers.
+
+* Functions should always be prototyped so that order of definition is
+  not important.
+
++ Operators analogous to tab, ltab, and dotab for operations on ROOT
+  and HDF5 tables via C++.
+
 + Extraction of results from executed program.
 
   This requires formatted output of results to files; e.g. mapping
   results to files and vice versa externally to the program.
+
+  Depends on storage as well (ROOT vs. HDF5)
 
 - Execution of compiled program via external-program:run
 

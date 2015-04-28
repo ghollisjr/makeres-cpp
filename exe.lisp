@@ -24,21 +24,65 @@
 (defun program-fn (&rest top-level-forms)
   "Returns string for the entire C++ program consisting of the
 top-level forms preceded by any required headers"
-  (let ((headers
-         (required-headers (cons 'progn top-level-forms)))
-        (cheaders
-         (required-cheaders (cons 'progn top-level-forms))))
+  (let* (;; many functions require proper code
+         (raw-progned-forms
+          (cons 'progn top-level-forms))
+         (required-functions
+          (required-functions raw-progned-forms))
+
+         ;; Prototyping required:
+         (explicit-function-forms
+          (remove-if-not (lambda (form)
+                           (eq (first form)
+                               'function))
+                         top-level-forms))
+         (implicit-function-forms
+          (mapcar (lambda (fsym)
+                    (destructuring-bind (&key type cpp-args body)
+                        (gethash fsym *cpp-funs*)
+                      `(function ,type ,fsym ,cpp-args ,@body)))
+                  required-functions))
+         (function-forms (append implicit-function-forms
+                                 explicit-function-forms))
+         (prototypes
+          (mapcar #'prototype function-forms))
+         (non-function-forms
+          (remove-if (lambda (form)
+                       (eq (first form)
+                           'function))
+                     top-level-forms))
+         (progned-forms
+          (cons 'progn
+                (append function-forms
+                        non-function-forms)))
+         (headers
+          (required-headers progned-forms))
+         (cheaders
+          (required-cheaders progned-forms)))
     (with-output-to-string (out)
       (loop
-         for h in headers
-         do (format out "#include<~a>~%" h))
+         for hs in headers
+         do (if (atom hs)
+                (format out "#include<~a>~%" hs)
+                (loop
+                   for h in hs
+                   do (format out "#include<~a>~%" hs))))
       (loop
-         for ch in cheaders
-         do (format out "extern \"C\" {~%#include<~a>~%}~%"
-                    ch))
+         for chs in cheaders
+         do (if (atom chs)
+                (format out "extern \"C\" {~%#include<~a>~%}~%" chs)
+                (loop
+                   for ch in chs
+                   do (format out "extern \"C\" {~%#include<~a>~%}~%" ch))))
       (loop
-         for expr in top-level-forms
-         do (format out "~a;~%" (cpp expr))))))
+         for expr in prototypes
+         do (format out "~a;~%" expr))
+      (loop
+         for expr in non-function-forms
+         do (format out "~a;~%" (cpp expr)))
+      (loop
+         for expr in function-forms
+         do (format out "~a~%" (cpp expr))))))
 
 (defmacro program (&body top-level-forms)
   `(program-fn ,@(loop
@@ -64,17 +108,25 @@ strings used as additional arguments to the compiler/linker."
                                  :if-exists :supersede
                                  :if-does-not-exist :create)
       (format source-file "~a" source-string))
-    (external-program:run "g++"
-                          (append
-                           flags
-                           (let ((rf
-                                  (split-sequence:split-sequence #\space
-                                                                 required-flags)))
-                             (if (equal rf '(""))
-                                 ()
-                                 rf))
-                           (list "-o" exe-path source-path))
-                          :output *standard-output*)
+    (external-program:run
+     "g++"
+     (flet ((unique (list)
+              (nreverse
+               (reduce (lambda (x y)
+                         (adjoin y x :test #'equal))
+                       list
+                       :initial-value nil))))
+       (unique
+        (append
+         flags
+         (let ((rf
+                (split-sequence:split-sequence #\space
+                                               required-flags)))
+           (if (equal rf '(""))
+               ()
+               rf))
+         (list "-o" exe-path source-path))))
+     :output *standard-output*)
     (external-program:run exe-path
                           arguments
                           :output output
