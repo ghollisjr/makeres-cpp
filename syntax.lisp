@@ -21,6 +21,19 @@
 
 (in-package :makeres-cpp)
 
+;;;; Call any function:
+(defcpp call (fname &rest args)
+  (format nil "~a(~{~a~^,~})"
+          (cpp fname)
+          (mapcar #'cpp args)))
+
+;;;; String constants
+
+;; Need this due to Lisp strings needing literal double-quotes inside
+;; the string in order to be properly output to the C++ file.
+(defcpp str (lisp-string)
+  (format nil "\"~a\"" lisp-string))
+
 ;;;; Function definition
 
 (defcpp function (type fname arg-list &body body)

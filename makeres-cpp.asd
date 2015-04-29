@@ -30,6 +30,8 @@
                #:external-program
                #:alexandria)
   :components ((:file "package")
+               ;; Reader macros:
+               (:file "read-macro")
                ;; Fundamental C++ code compilation & generation
                ;; utilities
                (:file "utils")

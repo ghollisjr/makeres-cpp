@@ -108,29 +108,40 @@ strings used as additional arguments to the compiler/linker."
                                  :if-exists :supersede
                                  :if-does-not-exist :create)
       (format source-file "~a" source-string))
-    (external-program:run
-     "g++"
-     (flet ((unique (list)
-              (nreverse
-               (reduce (lambda (x y)
-                         (adjoin y x :test #'equal))
-                       list
-                       :initial-value nil))))
-       (unique
-        (append
-         flags
-         (let ((rf
-                (split-sequence:split-sequence #\space
-                                               required-flags)))
-           (if (equal rf '(""))
-               ()
-               rf))
-         (list "-o" exe-path source-path))))
-     :output *standard-output*)
-    (external-program:run exe-path
+    (let ((ret
+           (second
+            (multiple-value-list
+             (external-program:run
+              "g++"
+              (flet ((unique (list)
+                       (nreverse
+                        (reduce (lambda (x y)
+                                  (adjoin y x :test #'equal))
+                                list
+                                :initial-value nil))))
+                (unique
+                 (append
+                  flags
+                  (let ((rf
+                         (split-sequence:split-sequence #\space
+                                                        required-flags)))
+                    (if (equal rf '(""))
+                        ()
+                        rf))
+                  (list "-o" exe-path source-path))))
+              :output *standard-output*
+              :error *standard-output*)))))
+      (when (not (zerop ret))
+        (error "Error Compiling ~a.cc~%g++ return value ~a" exe-path ret)))
+    (let ((ret
+           (second
+            (multiple-value-list
+             (external-program:run exe-path
                           arguments
                           :output output
-                          :input input)))
+                          :input input)))))
+      (when (not (zerop ret))
+        (error "Error Executing ~a~%Return value ~a" exe-path ret)))))
 
 (defmacro exe (exe-path top-level-forms
                &key

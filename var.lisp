@@ -21,11 +21,19 @@
 
 (in-package :makeres-cpp)
 
+;; Simple declaration and copy construction
 (defcpp var (type name &optional value)
   (with-output-to-string (out)
     (format out "~a ~a" (cpp type) (cpp name))
     (when value
       (format out " = ~a" (cpp value)))))
+
+;; Constructor
+(defcpp varcons (type name &rest args)
+  (format nil "~a ~a(~{~a~^,~})"
+          (cpp type)
+          (cpp name)
+          (mapcar #'cpp args)))
 
 ;; Returns a type which requires many type-tokens
 (defcpp type (&rest type-tokens)

@@ -89,3 +89,95 @@
                                 (method gen gaus 0 1)))
                   (<< cout (pmethod h entries) endl)))
        :output *standard-output*))
+
+(defun roottest2 ()
+  (exe "/home/ghollisjr/test/roottest2"
+       ((function int main ((var int argc)
+                            (var (pointer (pointer char)) argv))
+                  (var (pointer th1d)
+                       h
+                       (new th1d
+                            (str "hist")
+                            (str "hist")
+                            100
+                            -3
+                            3))
+                  (var trandom3 gen)
+                  (for (var int i 0) (< i 1000000) (incf i)
+                       (pmethod h fill
+                                (method gen gaus 0 1)))
+                  ;; post filling
+                  (var int nbins
+                       (pmethod h nbinsx))
+                  (for (var int i 1) (<= i nbins) (incf i)
+                       (var double x
+                            (pmethod h bin-center
+                                     i))
+                       (var int y
+                            (pmethod h bin-content
+                                     i))
+                       (<< cout
+                           x (str " ") y
+                           endl))
+                  (delete h)))
+       :output *standard-output*))
+
+(defun roottest3 ()
+  (exe "/home/ghollisjr/test/roottest3"
+       ((function int main ()
+                  ;; output tfile
+                  (varcons TFile outfile
+                            (str "/home/ghollisjr/test/roottest3.root")
+                            (str "RECREATE"))
+                  ;; output ttree
+                  (varcons TTree tree
+                            (str "tree")
+                            (str "tree"))
+                  ;; Branch x
+                  (var float x)
+                  (method tree Branch
+                          (str "x")
+                          (address x))
+                  ;; Branch y
+                  (var float y)
+                  (method tree Branch
+                          (str "y")
+                          (address y))
+                  ;; Branch r
+                  (var float r)
+                  (method tree Branch
+                          (str "r")
+                          (address r))
+                  ;; Write random numbers to TTree
+                  (var TRandom3 gen)
+                  (for (var int i 0) (< i 1000000) (incf i)
+                       (setf x
+                             (method gen Gaus
+                                     0 1))
+                       (setf y
+                             (method gen Gaus
+                                     0 1))
+                       (setf r
+                             (sqrt
+                              (pow (+ (pow x 2)
+                                      (pow y 2))
+                                   2)))
+                       (method tree Fill))
+                  ;; Close file
+                  (method tree Write)
+                  (method outfile root-close)
+                  (return 0)))))
+
+(defun roottest4 ()
+  (exe "/home/ghollisjr/test/roottest4"
+       ((function int main ()
+                  (varcons TFile infile
+                            (str "/home/ghollisjr/test/roottest3.root")
+                            (str "READ"))
+                  (var (pointer TTree) tree
+                       (typecast (pointer TTree)
+                                 (method infile Get
+                                         (str "tree"))))
+                  (<< cout (pmethod tree entries) endl)
+                  (method infile root-close)))
+       :output *standard-output*))

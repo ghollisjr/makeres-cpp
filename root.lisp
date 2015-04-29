@@ -31,6 +31,28 @@
 (defcpp draw () "Draw")
 (defcpp nbinsx () "GetNbinsX")
 (defcpp entries () "GetEntries")
+(defcpp Get () "Get")
+(defcpp GetObject () "GetObject")
+
+;;; Histogram methods
+
+;; bin-center only meaningful for 1-D
+(defcpp bin-center ()
+  "GetBinCenter")
+(defcpp bin-content ()
+  "GetBinContent")
+(defcpp bin-error ()
+  "GetBinError")
+(defcpp bin ()
+  "GetBin")
+
+;; Axes
+(defcpp x-axis ()
+  "GetXaxis")
+(defcpp y-axis ()
+  "GetYaxis")
+(defcpp z-axis ()
+  "GetZaxis")
 
 (defparameter *root-flags*
   (remove #\Newline
@@ -107,3 +129,6 @@
 
 ;; methods
 (defcpp gaus () "Gaus")
+
+;;;; TLorentzVector
+

@@ -1,6 +1,6 @@
 ;;;; makeres-cpp is a Common Lisp data analysis library.
 ;;;; Copyright 2015 Gary Hollis
-;;;; 
+;;;;
 ;;;; This file is part of makeres-cpp.
 ;;;;
 ;;;; makeres-cpp is free software: you can redistribute it and/or
@@ -11,11 +11,11 @@
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; General Public License for more details.
-;;;; 
+;;;;
 ;;;; You should have received a copy of the GNU General Public License
 ;;;; along with makeres-cpp.  If not, see
 ;;;; <http://www.gnu.org/licenses/>.
-;;;; 
+;;;;
 ;;;; You may contact Gary Hollis (me!) via email at
 ;;;; ghollisjr@gmail.com
 
@@ -24,14 +24,6 @@
 (defparameter *proj->bin-path*
   (make-hash-table :test 'equal)
   "Map from project to binary directory path for project")
-
-(defun defprog-fn ()
-  "Defines C++ program"
-  )
-
-(defmacro defprog ()
-  "Defines a C++ program"
-  )
 
 (defparameter *proj->cpp*
   (make-hash-table :test 'equal)
@@ -80,20 +72,22 @@ arguments in the form for lists.  If there is no defined operator
 corresponding to the first element of the list, standard function call
 notation is assumed and the symbol is downcased as a string for the
 function name."
-  (when form
-    (let ((sym->fn (gethash *project-id* *proj->cpp*)))
-      (if (atom form)
-          (aif (gethash form sym->fn)
-               (funcall it)
-               (if (stringp form)
-                   form
-                   (string-downcase (mkstr form))))
-          (aif (gethash (first form) sym->fn)
-               (apply it
-                      (rest form))
-               (format nil "~a(~{~a~^,~})"
-                       (string-downcase (string (first form)))
-                       (mapcar #'cpp (rest form))))))))
+  (handler-case
+      (when form
+        (let ((sym->fn (gethash *project-id* *proj->cpp*)))
+          (if (atom form)
+              (aif (gethash form sym->fn)
+                   (funcall it)
+                   (if (stringp form)
+                       form
+                       (string-downcase (mkstr form))))
+              (aif (gethash (first form) sym->fn)
+                   (apply it
+                          (rest form))
+                   (format nil "~a(~{~a~^,~})"
+                           (string-downcase (string (first form)))
+                           (mapcar #'cpp (rest form)))))))
+    (error (err) (error "(cpp ~a):~%~a" form err))))
 
 (defgeneric lisp->cpp (lisp-object &rest args)
   (:documentation "Generates a C++ string for the Lisp object.  args
@@ -120,3 +114,15 @@ function name."
       (format out "\"")))
   (:method (x &rest args)
     (format nil "~a" x)))
+
+;; gsym returns new valid C++ symbol every time it's called of the
+;; form gsym{number}
+
+(defparameter *gsym-index* 0)
+
+(defun reset-gsym ()
+  (setf *gsym-index* 0))
+
+(defun gsym ()
+  (incf *gsym-index*)
+  (format nil "gsym~a" *gsym-index*))
