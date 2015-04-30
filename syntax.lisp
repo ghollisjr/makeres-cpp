@@ -27,6 +27,11 @@
           (cpp fname)
           (mapcar #'cpp args)))
 
+;;;; sizeof operator
+(defcpp sizeof (type)
+  (format nil "sizeof(~a)"
+          (cpp type)))
+
 ;;;; String constants
 
 ;; Need this due to Lisp strings needing literal double-quotes inside
@@ -106,3 +111,6 @@
     (format out "return")
     (when val
       (format out " (~a)" (cpp val)))))
+
+;; NULL
+(defcpp NULL () "NULL")

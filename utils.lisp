@@ -45,7 +45,13 @@ supplied to the lambda operator."
     `(symbol-macrolet ((,ops (gethash *project-id*
                                       *proj->cpp*)))
        (ensure-project)
-       (setf (gethash ',opname ,ops)
+       (setf (gethash (if (equal (package-name
+                                  (symbol-package ',opname))
+                                 "KEYWORD")
+                          ',opname
+                          (intern (string ',opname)
+                                  :makeres-cpp))
+                      ,ops)
              (lambda ,(mapcar (lambda (token)
                                 (if (eq token '&body)
                                     '&rest
@@ -76,17 +82,32 @@ function name."
       (when form
         (let ((sym->fn (gethash *project-id* *proj->cpp*)))
           (if (atom form)
-              (aif (gethash form sym->fn)
-                   (funcall it)
-                   (if (stringp form)
-                       form
-                       (string-downcase (mkstr form))))
-              (aif (gethash (first form) sym->fn)
-                   (apply it
-                          (rest form))
-                   (format nil "~a(~{~a~^,~})"
-                           (string-downcase (string (first form)))
-                           (mapcar #'cpp (rest form)))))))
+              (let ((form (if (and (symbolp form)
+                                   (not (equal
+                                         (package-name (symbol-package form))
+                                         "KEYWORD")))
+                              (intern (string form)
+                                      :makeres-cpp)
+                              form)))
+                (aif (gethash form sym->fn)
+                     (funcall it)
+                     (if (stringp form)
+                         form
+                         (string-downcase (mkstr form)))))
+              (let ((first
+                     (if (and (symbolp (first form))
+                              (not (equal
+                                    (package-name (symbol-package (first form)))
+                                    "KEYWORD")))
+                         (intern (string (first form))
+                                 :makeres-cpp)
+                         (first form))))
+                (aif (gethash first sym->fn)
+                     (apply it
+                            (rest form))
+                     (format nil "~a(~{~a~^,~})"
+                             (string-downcase (string first))
+                             (mapcar #'cpp (rest form))))))))
     (error (err) (error "(cpp ~a):~%~a" form err))))
 
 (defgeneric lisp->cpp (lisp-object &rest args)

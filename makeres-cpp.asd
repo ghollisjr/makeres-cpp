@@ -38,6 +38,9 @@
                ;; C++ function definition
                (:file "function")
 
+               ;; Read/Write ROOT histogram via HDF5 cl-ana formatting
+               (:file "histogram")
+
                ;; Commented until I get these parts working
                
                ;; ;; C++ table operators

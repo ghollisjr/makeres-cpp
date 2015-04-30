@@ -30,6 +30,12 @@
    :defprog-fn
 
    ;; define C++ library
-   :deflib))
+   :deflib
+
+   ;; Program generation and execution
+   :exe
+   :exe-fn
+   :program
+   :program-fn))
 
 (cl-ana.package-utils:use-package-group :cl-ana :makeres-cpp)

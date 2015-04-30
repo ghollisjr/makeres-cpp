@@ -1,5 +1,15 @@
-+ cpp-gsym function which generates unique C++ symbols in much the
-  same way that gensym does for Lisp.  Only needs to generate unique
++ Possibly add array type declarations, although they are not strictly
+  necessary due to being able to use new[].
+
+- May need to change the way I handle pointers or types in general
+  since at the moment it seems awkward to express the difference
+  between const pointers, pointers to const objects, and const
+  pointers to const objects.
+
+  Added const operator which returns the const type for a given type.
+
+- gsym function which generates unique C++ symbols in much the same
+  way that gensym does for Lisp.  Only needs to generate unique
   symbols in the context of a single program, so for readability it
   shouldn't just keep making newer and newer symbols, only as many as
   it needs.

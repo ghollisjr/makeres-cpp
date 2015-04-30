@@ -40,6 +40,11 @@
   (format nil "~{~a~^ ~}"
           (mapcar #'cpp type-tokens)))
 
+;; Returns the const type for a given type
+(defcpp const (type)
+  (format nil "~a const"
+          (cpp type)))
+
 ;; Returns the pointer type for a given type
 (defcpp pointer (type)
   (format nil "~a*" (cpp type)))

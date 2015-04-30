@@ -181,3 +181,12 @@
                   (<< cout (pmethod tree entries) endl)
                   (method infile root-close)))
        :output *standard-output*))
+
+(defun histtest1 ()
+  (exe "/home/ghollisjr/test/histtest1"
+       ((function int main ()
+                  (var (pointer TH1D) hist
+                       (typecast (pointer TH1D)
+                                 (read_histogram
+                                  (str "/home/ghollisjr/test/hist.h5"))))))
+       :output *standard-output*))

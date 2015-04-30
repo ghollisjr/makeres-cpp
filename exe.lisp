@@ -21,6 +21,40 @@
 
 (in-package :makeres-cpp)
 
+(defun program-source (&rest top-level-forms)
+  "Returns full program source code (minus headers) given top-level
+forms"
+  (let* (;; many functions require proper code
+         (raw-progned-forms
+          (cons 'progn top-level-forms))
+         (required-functions
+          (required-functions raw-progned-forms))
+
+         ;; Prototyping required:
+         (explicit-function-forms
+          (remove-if-not (lambda (form)
+                           (eq (first form)
+                               'function))
+                         top-level-forms))
+         (implicit-function-forms
+          (mapcar (lambda (fsym)
+                    (destructuring-bind (&key type cpp-args body)
+                        (gethash fsym *cpp-funs*)
+                      `(function ,type ,fsym ,cpp-args ,@body)))
+                  required-functions))
+         (function-forms (append implicit-function-forms
+                                 explicit-function-forms))
+         (prototypes
+          (mapcar #'prototype function-forms))
+         (non-function-forms
+          (remove-if (lambda (form)
+                       (eq (first form)
+                           'function))
+                     top-level-forms)))
+    (append prototypes
+            non-function-forms
+            function-forms)))
+
 (defun program-fn (&rest top-level-forms)
   "Returns string for the entire C++ program consisting of the
 top-level forms preceded by any required headers"
@@ -101,7 +135,9 @@ strings used as additional arguments to the compiler/linker."
   (let* ((source-path
           (string-append (namestring exe-path) ".cc"))
          (source-string (apply #'program-fn top-level-forms))
-         (required-flags (compile-flags (cons 'progn top-level-forms))))
+         (required-flags (compile-flags
+                          (cons 'progn
+                                (apply #'program-source top-level-forms)))))
     (ensure-directories-exist exe-path)
     (with-open-file (source-file source-path
                                  :direction :output

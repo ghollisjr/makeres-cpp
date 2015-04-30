@@ -75,6 +75,17 @@
 
 (defstdobj string)
 
+(defheader "vector"
+    (vector))
+
+(defcpp vector (type)
+  (format nil "std::vector<~a>"
+          (cpp type)))
+
+;; c_str method
+(defcpp c-str ()
+  "c_str")
+
 ;;;; Standard lib from C
 (defheader "cstdlib"
     (;; reading numbers from c-strings
