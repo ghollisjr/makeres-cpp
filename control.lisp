@@ -70,7 +70,7 @@
     (format out "}~%")
     (when else
       (format out "else {~%")
-      (format out "~a;~%" (cpp expr))
+      (format out "~a;~%" (cpp else))
       (format out "}~%"))))
 
 ;; Transliteration of C++ for

@@ -30,6 +30,8 @@
 (defcpp fit () "Fit") ; don't think I'll use it, but ok
 (defcpp draw () "Draw")
 (defcpp nbinsx () "GetNbinsX")
+(defcpp nbinsy () "GetNbinsY")
+(defcpp nbinsz () "GetNbinsZ")
 (defcpp entries () "GetEntries")
 (defcpp Get () "Get")
 (defcpp GetObject () "GetObject")
@@ -41,10 +43,16 @@
   "GetBinCenter")
 (defcpp bin-content ()
   "GetBinContent")
+(defcpp set-bin-content ()
+  "SetBinContent")
 (defcpp bin-error ()
   "GetBinError")
+(defcpp set-bin-error ()
+  "SetBinError")
 (defcpp bin ()
   "GetBin")
+(defcpp find-bin ()
+  "FindBin")
 
 ;; Axes
 (defcpp x-axis ()
@@ -71,6 +79,8 @@
 (with-root-header "TH1.h"
   ((defcpp th1 () "TH1")))
 
+;;; 1-D
+
 ;; TH1D
 (with-root-header "TH1D.h"
   ((defcpp th1d ()
@@ -85,6 +95,47 @@
 (with-root-header "TH1I.h"
   ((defcpp th1I ()
      "TH1I")))
+
+;;; 2-D
+
+;; TH2D
+(with-root-header "TH2D.h"
+  ((defcpp th2d ()
+     "TH2D")))
+
+;; TH2F
+(with-root-header "TH2F.h"
+  ((defcpp th2f ()
+     "TH2F")))
+
+;; TH2I
+(with-root-header "TH2I.h"
+  ((defcpp th2I ()
+     "TH2I")))
+
+;;; 3-D
+
+;; TH3D
+(with-root-header "TH3D.h"
+  ((defcpp th3d ()
+     "TH3D")))
+
+;; TH3F
+(with-root-header "TH3F.h"
+  ((defcpp th3f ()
+     "TH3F")))
+
+;; TH3I
+(with-root-header "TH3I.h"
+  ((defcpp th3I ()
+     "TH3I")))
+
+;; Sparse
+(with-root-header "THnSparse.h"
+  ((defcpp THnSparseD ()
+     "THnSparseD")
+   (defcpp THnSparseF ()
+     "THnSparseF")))
 
 ;;;; TTrees:
 (with-root-header "TTree.h"

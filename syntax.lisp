@@ -27,6 +27,12 @@
           (cpp fname)
           (mapcar #'cpp args)))
 
+;;;; Define a structure
+(defcpp struct (name &rest body)
+  (format nil "struct ~a {~%~{~a;~%};~};"
+          (cpp name)
+          (mapcar #'cpp body)))
+
 ;;;; sizeof operator
 (defcpp sizeof (type)
   (format nil "sizeof(~a)"

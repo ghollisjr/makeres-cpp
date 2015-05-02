@@ -127,12 +127,12 @@
        ((function int main ()
                   ;; output tfile
                   (varcons TFile outfile
-                            (str "/home/ghollisjr/test/roottest3.root")
-                            (str "RECREATE"))
+                           (str "/home/ghollisjr/test/roottest3.root")
+                           (str "RECREATE"))
                   ;; output ttree
                   (varcons TTree tree
-                            (str "tree")
-                            (str "tree"))
+                           (str "tree")
+                           (str "tree"))
                   ;; Branch x
                   (var float x)
                   (method tree Branch
@@ -172,8 +172,8 @@
   (exe "/home/ghollisjr/test/roottest4"
        ((function int main ()
                   (varcons TFile infile
-                            (str "/home/ghollisjr/test/roottest3.root")
-                            (str "READ"))
+                           (str "/home/ghollisjr/test/roottest3.root")
+                           (str "READ"))
                   (var (pointer TTree) tree
                        (typecast (pointer TTree)
                                  (method infile Get
@@ -185,8 +185,129 @@
 (defun histtest1 ()
   (exe "/home/ghollisjr/test/histtest1"
        ((function int main ()
+                  (var (pointer TH2D) hist
+                       (typecast (pointer TH2D)
+                                 (read_histogram
+                                  (str "/home/ghollisjr/test/hist.h5"))))
+                  (var int nbins
+                       (* (pmethod hist
+                                   nbinsx)
+                          (pmethod hist
+                                   nbinsy)))
+                  (<< cout nbins endl)
+
+                  ;; (for (var int i 1) (<= i nbins) (incf i)
+                  ;;      (<< cout
+                  ;;          (pmethod hist
+                  ;;                   bin-content
+                  ;;                   i)
+                  ;;          (str " +- ")
+                  ;;          (pmethod hist
+                  ;;                   bin-error
+                  ;;                   i)
+                  ;;          endl))
+                  ))
+       :output *standard-output*))
+
+(defun histtest2 ()
+  (exe "/home/ghollisjr/test/histtest2"
+       ((function int main ()
                   (var (pointer TH1D) hist
                        (typecast (pointer TH1D)
                                  (read_histogram
-                                  (str "/home/ghollisjr/test/hist.h5"))))))
+                                  (str "/home/ghollisjr/test/hist2.h5"))))
+                  (var int nbins
+                       (pmethod hist
+                                nbinsx))
+                  (for (var int i 1) (<= i nbins) (incf i)
+                       (var double content
+                            (pmethod hist
+                                     bin-content
+                                     i))
+                       (if (not (= content 0))
+                           (<< cout
+                               content
+                               (str " +- ")
+                               (pmethod hist
+                                        bin-error
+                                        i)
+                               endl)))
+                  ))
+       :output *standard-output*))
+
+(defun histtest3 ()
+  (exe "/home/ghollisjr/test/histtest3"
+       ((function int main ()
+                  (var (pointer TH1D) hist
+                       (typecast (pointer TH1D)
+                                 (read_histogram
+                                  (str "/home/ghollisjr/test/hist3.h5"))))
+                  (var int nbins
+                       (pmethod hist
+                                nbinsx))
+                  (<< cout nbins endl)
+                  ;; (for (var int i 1) (<= i nbins) (incf i)
+                  ;;      (<< cout
+                  ;;          (pmethod hist
+                  ;;                   bin-content
+                  ;;                   i)
+                  ;;          (str " +- ")
+                  ;;          (pmethod hist
+                  ;;                   bin-error
+                  ;;                   i)
+                  ;;          endl))
+                  ))
+       :output *standard-output*))
+
+(defun histtest4 ()
+  (exe "/home/ghollisjr/test/histtest4"
+       ((function int main ()
+                  (var (pointer TH2D) hist
+                       (typecast (pointer TH2D)
+                                 (read_histogram
+                                  (str "/home/ghollisjr/test/hist4.h5"))))
+                  (var int nbins
+                       (* (pmethod hist
+                                   nbinsx)
+                          (pmethod hist
+                                   nbinsy)))
+                  (<< cout nbins endl)
+                  ;; (for (var int i 1) (<= i nbins) (incf i)
+                  ;;      (<< cout
+                  ;;          (pmethod hist
+                  ;;                   bin-content
+                  ;;                   i)
+                  ;;          (str " +- ")
+                  ;;          (pmethod hist
+                  ;;                   bin-error
+                  ;;                   i)
+                  ;;          endl))
+                  ))
+       :output *standard-output*))
+
+(defun histtest5 ()
+  (exe "/home/ghollisjr/test/histtest5"
+       ((function int main ()
+                  (var (pointer TH1D) hist
+                       (typecast (pointer TH1D)
+                                 (read_histogram
+                                  (str "/home/ghollisjr/test/hist5.h5"))))
+                  (var int nbins
+                       (pmethod hist
+                                nbinsx))
+                  (<< cout nbins endl)
+                  (for (var int i 1) (<= i nbins) (incf i)
+                       (var double content
+                            (pmethod hist
+                                     bin-content
+                                     i))
+                       (if (not (= content 0))
+                           (<< cout
+                               content
+                               (str " +- ")
+                               (pmethod hist
+                                        bin-error
+                                        i)
+                               endl)))
+                  ))
        :output *standard-output*))
