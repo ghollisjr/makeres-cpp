@@ -1,3 +1,13 @@
++ get-bin-center using TAxis is not working as I thought it would for
+  any histogram with more than one axis.  The axis needs its own index
+  to find the bin center, not the global bin index.  I need to use the
+  other functions to compute these indices and use them to get the bin
+  centers in the write_histogram function.
+
++ Rename all the Get... methods to include the get or set prefix.
+  Turns out it's pretty nasty to remove them since there isn't a
+  separate function namespace.
+
 + Possibly add array type declarations, although they are not strictly
   necessary due to being able to use new[].
 

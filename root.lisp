@@ -32,6 +32,7 @@
 (defcpp nbinsx () "GetNbinsX")
 (defcpp nbinsy () "GetNbinsY")
 (defcpp nbinsz () "GetNbinsZ")
+(defcpp axis.nbins () "GetNbins")
 (defcpp entries () "GetEntries")
 (defcpp Get () "Get")
 (defcpp GetObject () "GetObject")
@@ -39,22 +40,34 @@
 ;;; Histogram methods
 
 ;; bin-center only meaningful for 1-D
-(defcpp bin-center ()
+(defcpp get-bin-center ()
   "GetBinCenter")
-(defcpp bin-content ()
+(defcpp get-bin-content ()
   "GetBinContent")
 (defcpp set-bin-content ()
   "SetBinContent")
 (defcpp bin-error ()
   "GetBinError")
+(defcpp get-bin-error2 ()
+  "GetBinError2")
 (defcpp set-bin-error ()
   "SetBinError")
 (defcpp bin ()
   "GetBin")
 (defcpp find-bin ()
   "FindBin")
+(defcpp bin-low-edge ()
+  "GetBinLowEdge")
+(defcpp bin-up-edge ()
+  "GetBinUpEdge")
+(defcpp get-sumw2-n ()
+  "GetSumw2N")
+(defcpp get-calculate-errors ()
+  "GetCalculateErrors")
 
 ;; Axes
+(defcpp get-axis ()
+  (format nil "GetAxis"))
 (defcpp x-axis ()
   "GetXaxis")
 (defcpp y-axis ()
@@ -74,6 +87,13 @@
 (defmacro with-root-header (&rest args)
   `(with-defheader ,@args :flags *root-flags*))
 
+;;;; Axes
+(defheader "TAxis.h"
+    (TAxis
+     axis))
+
+(defcpp TAxis () "TAxis")
+  
 ;;;; Histograms:
 
 (with-root-header "TH1.h"

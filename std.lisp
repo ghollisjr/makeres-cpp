@@ -75,6 +75,22 @@
 
 (defstdobj string)
 
+;; String streams & formatting
+(defheader "sstream"
+    (stringstream
+     istringstream
+     ostringstream
+     hex))
+
+(defstdobj stringstream)
+(defstdobj istringstream)
+(defstdobj ostringstream)
+(defstdobj hex)
+
+;; str method
+(defcpp stringstream.str ()
+  "str")
+
 (defheader "vector"
     (vector))
 

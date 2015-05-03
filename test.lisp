@@ -231,6 +231,38 @@
                                (pmethod hist
                                         bin-error
                                         i)
-                               endl)))
-                  ))
+                               endl)))))
+       :output *standard-output*))
+
+(defun whisttest ()
+  (exe "/home/ghollisjr/test/whisttest"
+       ((function int main ()
+                  (varcons TH3D hist
+                           (str "hist")
+                           (str "hist")
+                           10
+                           -3
+                           3
+                           20
+                           -4
+                           4
+                           50
+                           -5
+                           5)
+                  (method hist Fill
+                          (typecast double 0)
+                          (typecast double 0)
+                          (typecast double 0))
+                  (var (pointer string) field_names
+                       (new[] string 3))
+                  (setf (aref field_names 0)
+                        (str "first-field"))
+                  (setf (aref field_names 1)
+                        (str "second-field"))
+                  (setf (aref field_names 2)
+                        (str "third-field"))
+                  (write_histogram (address hist)
+                                   3
+                                   (str "/home/ghollisjr/test/whist.h5")
+                                   field_names)))
        :output *standard-output*))

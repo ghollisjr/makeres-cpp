@@ -46,6 +46,20 @@
 (defcpp decf (var)
   (format nil "(--~a)" (cpp var)))
 
+;;; modular arithmetic
+(defcpp mod (x divisor)
+  (format nil "((~a) % (~a))"
+          (cpp x)
+          (cpp divisor)))
+
+(defcpp int-/ (num den)
+  (cpp `(/ (typecast int ,num)
+           (typecast int ,den))))
+
+(defcpp long-/ (num den)
+  (cpp `(/ (typecast long ,num)
+           (typecast long ,den))))
+
 ;;;; Comparison functions:
 
 (macrolet ((defboolop (sym &optional str)
