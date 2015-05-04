@@ -42,6 +42,8 @@
 ;; bin-center only meaningful for 1-D
 (defcpp get-bin-center ()
   "GetBinCenter")
+(defcpp get-bin-xyz ()
+  "GetBinXYZ")
 (defcpp get-bin-content ()
   "GetBinContent")
 (defcpp set-bin-content ()

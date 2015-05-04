@@ -562,7 +562,7 @@
           (typecast (pointer THnSparseD) hist))
      (for (var int dim 0) (< dim ndims) (incf dim)
           (setf (aref axes dim)
-                (pmethod h axis
+                (pmethod h get-axis
                          dim)))))
 
   (for (var int dim 0) (< dim ndims) (incf dim)
@@ -938,6 +938,13 @@
           (= ndims 2)
           (var (pointer TH2D) h
                (typecast (pointer TH2D) hist))
+          (var int x_index)
+          (var int y_index)
+          (var int z_index)
+          (pmethod h
+                   get-bin-xyz
+                   i x_index y_index z_index)
+
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
@@ -955,15 +962,21 @@
           (setf (aref xs 0)
                 (pmethod xaxis
                          get-bin-center
-                         i))
+                         x_index))
           (setf (aref xs 1)
                 (pmethod yaxis
                          get-bin-center
-                         i)))
+                         y_index)))
          (;; TH3D
           (= ndims 3)
           (var (pointer TH3D) h
                (typecast (pointer TH3D) hist))
+          (var int x_index)
+          (var int y_index)
+          (var int z_index)
+          (pmethod h
+                   get-bin-xyz
+                   i x_index y_index z_index)
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
@@ -979,19 +992,19 @@
                (pmethod h y-axis))
           (var (pointer TAxis) zaxis
                (pmethod h z-axis))
-          
+
           (setf (aref xs 0)
                 (pmethod xaxis
                          get-bin-center
-                         i))
+                         x_index))
           (setf (aref xs 1)
                 (pmethod yaxis
                          get-bin-center
-                         i))
+                         y_index))
           (setf (aref xs 2)
                 (pmethod zaxis
                          get-bin-center
-                         i)))
+                         z_index)))
          (;; Sparse
           t
           (var (pointer THnSparseD) h
@@ -1006,11 +1019,16 @@
                      (pmethod h
                               get-bin-error2
                               i))))
+          (var (pointer int) indices
+               (new[] int ndims))
+          (pmethod h get-bin-content
+                   i indices)
           (for (var int axis_index 0) (< axis_index ndims) (incf axis_index)
                (var (pointer TAxis) axis
                     (pmethod h get-axis axis_index))
                (setf (aref xs axis_index)
-                     (pmethod axis get-bin-center i)))))
+                     (pmethod axis get-bin-center
+                              (aref indices axis_index))))))
        ;; Fill buffer whenever count or error are not zero
        (var long buf_index
             (mod row chunk_size))
@@ -1032,7 +1050,6 @@
                  (setf (aref buf (+ 1 buf_index))
                        (aref count 1)))
              (for (var int j 0) (< j ndims) (incf j)
-                  (<< cout (aref xs j) endl)
                   (setf (aref buf (+ buf_index j n_count_vars))
                         (aref xs j)))
              (incf row)))
