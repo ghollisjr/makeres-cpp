@@ -1,4 +1,4 @@
-+ get-bin-center using TAxis is not working as I thought it would for
+- get-bin-center using TAxis is not working as I thought it would for
   any histogram with more than one axis.  The axis needs its own index
   to find the bin center, not the global bin index.  I need to use the
   other functions to compute these indices and use them to get the bin
@@ -27,7 +27,7 @@
   Could also simply return a function which would generate unique
   symbols for use in a single compilation.
 
-+ Reading & writing ROOT histograms from/to HDF5 files.
+- Reading & writing ROOT histograms from/to HDF5 files.
 
   There are two options:
 
@@ -42,11 +42,13 @@
 
   Going with 2 for now.
 
-+ Support inclusion of C++ code blocks in addition to headers.  This
+- Support inclusion of C++ code blocks in addition to headers.  This
   allows libraries of C++ code to be written in Lisp-like C++ and then
   included in programs automatically whenever they are referenced.
 
-+ Remove duplicate compilation flags in the case of multiple identical
+  Functions currently supported, macros would be nice in the future.
+
+- Remove duplicate compilation flags in the case of multiple identical
   compile flags being required by different headers.
 
 * Functions should always be prototyped so that order of definition is
@@ -68,7 +70,9 @@
 
 - Full program source code generation to file
 
-+ Significant subset of the basic C++ operators and types
+- Significant subset of the basic C++ operators and types
+
+  More operators and structures will be added incrementally.
 
 - Header management which defines the operators supplied by each
   header so that includes can be calculated by the terms used in the
