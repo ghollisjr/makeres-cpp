@@ -64,6 +64,21 @@
 
   Depends on storage as well (ROOT vs. HDF5)
 
+  Given the new logging strategy, the generally appropriate approach
+  would be to have the pathname of the file depend on the target id,
+  but to be placed in the work directory.  cpptrans will need to do
+  this.
+
+  However, since histograms are already supported by normal logging,
+  perhaps histograms should be treated differently.  Histograms could
+  be initially saved in files in the work directory, but in the final
+  computation of the results would be read from the temporary file and
+  then the temporary file would be removed.  A subsequent call to
+  setresfn would then save the histogram in its own log directory.
+
+  ROOT TTrees might be best left in the work directory to be
+  consistent with the way tables are currently handled.
+
 - Execution of compiled program via external-program:run
 
 - Compilation of source code via external-program:run
