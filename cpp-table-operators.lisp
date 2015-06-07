@@ -62,22 +62,9 @@ op can be :add or :set, resulting in adding lfields or setting lfields
 respectively."
   `(deflfieldsfn ',table-id ',lfields :op ,op))
 
-;; General table reduction:
-(defmacro dotab (source-table init-bindings return &body body)
-  "Operator used for denoting a loop over a table.
-
-init-bindings are placed in a let* outside the loop body, which
-executes body once per row in a context where the macro field is
-defined which has access to any physical or logical fields by their
-symbol.
-
-return is the return value of the dotab, executed inside the
-init-bindings let form."
-  `(table-pass ,source-table ,init-bindings ,return () ,@body))
-
 ;; Physical table reductions:
-(defmacro tab (source inits opener
-               &body body)
+(defmacro ctab (source inits opener
+                  &body body)
   "Operator for generating physical tables via table-pass.  Returns a
 table-pass form (so you can run macroexpand on it in a graph
 transformation).
@@ -110,7 +97,7 @@ table (will be supplied the result table)."
          ,@body))))
 
 ;; Logical table reductions:
-(defmacro ltab (source inits &body body)
+(defmacro lctab (source inits &body body)
   "Like tab, but for logical tables.  Returns nil.  Requires special
   treatment since logical tables don't yield a result.  Arguments are
   simply for tracking the logical table."
@@ -129,7 +116,7 @@ table (will be supplied the result table)."
 ;; general purpose table iteration, more functional than do-table,
 ;; used as implementation backbone for all makeres-table
 ;; transformations
-(defmacro table-pass (table inits result lfields &body body)
+(defmacro cpp-table-pass (table inits result lfields &body body)
   "Loops over table with external bindings inits and result form
 result, executing body once per row.
 
