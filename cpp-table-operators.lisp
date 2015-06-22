@@ -83,8 +83,8 @@ inits are used for bindings outside the table-pass loop.
 body will be placed in a macrolet which macrolets push-field,
 accepting all arguments to table-push-field minus the destination
 table (will be supplied the result table)."
-  (let ((closure (gsym 'tabletrans))
-        (result (gsym 'tabletrans)))
+  (let ((closure (gsym))
+        (result (gsym)))
     `(table-pass ,source
          (,@inits
           (,closure ,opener)
@@ -116,9 +116,9 @@ table (will be supplied the result table)."
 ;; general purpose table iteration, more functional than do-table,
 ;; used as implementation backbone for all makeres-table
 ;; transformations
-(defmacro cpp-table-pass (table inits result lfields &body body)
-  "Loops over table with external bindings inits and result form
-result, executing body once per row.
+(defmacro cpp-table-pass (table inits posts lfields &body body)
+  "Loops over table with external bindings inits and final execuation
+forms posts, executing body once per row.
 
 macro field yields the field value of current row.
 
@@ -129,7 +129,7 @@ reference the field value.  I've tried various options to make this
 work via macros but nothing short of code walking looks viable, and
 this is my naive code walking strategy's fault.
 
-When used with makeres, each table-pass is guaranteed to have
+When used with makeres, each cpp-table-pass is guaranteed to have
 independent lfields and inits, no matter what symbol names you choose.
 If you need a common lfield, use deflfields.  If you need a common
 init binding, at the moment the only solution is to combine the
@@ -144,18 +144,15 @@ targets manually (usually more conceptually clear incidentally)."
          (let ((result (make-hash-table :test 'equal)))
            (loop for i in lfields
               do (setf (gethash (first i) result)
-                       (gsym 'tabletrans)))
+                       (gsym)))
            result)))
-    (let ((ri (gsym 'tabletrans)))
+    (let ((ri (gsym)))
       `(macrolet ((field (field-sym)
                     (or (gethash field-sym ,lfield->gsym)
                         (intern (lispify field-sym)))))
          (let* ,inits
            (do-table (,ri ,table)
-               ,(list->set (mapcar (lambda (x)
-                                     (if (symbolp x)
-                                         (intern (lispify x))
-                                         (string x)))
+               ,(list->set (mapcar #'string
                                    (remove-if
                                     (lambda (x)
                                       (gethash x lfield->gsym))
