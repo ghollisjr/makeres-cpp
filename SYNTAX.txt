@@ -1,0 +1,7 @@
+* Type & Variables
+
+Variables are declared via the var operator.  Variables declared
+requiring a constructor are declared via the varcons operator.
+
+Dynamically allocated memory is controlled via the new, new[], delete,
+and delete[] operators.

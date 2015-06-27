@@ -1,6 +1,6 @@
 ;;;; makeres-cpp is a Common Lisp data analysis library.
 ;;;; Copyright 2015 Gary Hollis
-;;;; 
+;;;;
 ;;;; This file is part of makeres-cpp.
 ;;;;
 ;;;; makeres-cpp is free software: you can redistribute it and/or
@@ -64,7 +64,7 @@ respectively."
 
 ;; Physical table reductions:
 (defmacro ctab (source inits opener
-                  &body body)
+                &body body)
   "Operator for generating physical tables via table-pass.  Returns a
 table-pass form (so you can run macroexpand on it in a graph
 transformation).
@@ -105,20 +105,33 @@ table (will be supplied the result table)."
 
 ;;;; NOTES
 ;;;;
-;;;; * The lfields argument is necessary in the way the merge
-;;;;   algorithm is currently written.  There is however latent
-;;;;   functionality which allows for individual table-pass form
-;;;;   specific lfields in the algorithm which is unavailable to the
-;;;;   user if they use the dotab operator; it is not a loss due to
-;;;;   being able to use the let operator in the loop body, but this
-;;;;   note is for future reference if concerns about lfields arise.
+;;;; * lfields have a different syntax than that of the makeres-table
+;;;;   operators.  The lfields are just general C++ expressions and
+;;;;   should occur in the exact order in which they should be
+;;;;   executed.  There is no need to use the field operator to
+;;;;   reference lfields, scoping will be used to gaurantee distinct
+;;;;   references.  Additionally, it may become useful or necessary to
+;;;;   add an set of cleanup forms to call at the end of the pass
+;;;;   loop.
+;;;;
+;;;;   This destroys the ability to control which lfields are
+;;;;   evaluated, but at the moment the only other options would
+;;;;   require quite a bit of work.  I need something now.
 
 ;; general purpose table iteration, more functional than do-table,
 ;; used as implementation backbone for all makeres-table
 ;; transformations
-(defmacro cpp-table-pass (table inits posts lfields &body body)
+(defmacro cpp-table-pass (ttree-paths ttree-name exe-path
+                          fields-types
+                          inits posts lfields
+                          &body body)
   "Loops over table with external bindings inits and final execuation
 forms posts, executing body once per row.
+
+Any dependent lfields should always be given after their dependencies.
+
+fields-types must be a list with elements of the following
+form: (field-symbol type &rest counts)
 
 macro field yields the field value of current row.
 
@@ -140,41 +153,108 @@ targets manually (usually more conceptually clear incidentally)."
   ;; Having difficulties expanding the body to get the fields which
   ;; are present, trying to use &environment with expand macro but not
   ;; much luck so far.
-  (let ((lfield->gsym
-         (let ((result (make-hash-table :test 'equal)))
-           (loop for i in lfields
-              do (setf (gethash (first i) result)
-                       (gsym)))
-           result)))
-    (let ((ri (gsym)))
-      `(macrolet ((field (field-sym)
-                    (or (gethash field-sym ,lfield->gsym)
-                        (intern (lispify field-sym)))))
-         (let* ,inits
-           (do-table (,ri ,table)
-               ,(list->set (mapcar #'string
-                                   (remove-if
-                                    (lambda (x)
-                                      (gethash x lfield->gsym))
-                                    (append (cl-ana.makeres::find-dependencies lfields 'field)
-                                            (cl-ana.makeres::find-dependencies body 'field))))
-                           #'string=)
-             (olet ,(loop for i in lfields
-                       collect `(,(gethash (first i) lfield->gsym)
-                                  ,(second i)))
-               ,@(remove-if-not (lambda (x)
-                                  (and (listp x)
-                                       (eq (first x)
-                                           'declare)))
-                                body)
-               (flet ((row-number ()
-                        ,ri))
-                 ,@(remove-if (lambda (x)
-                                (and (listp x)
-                                     (eq (first x)
-                                         'declare)))
-                              body))))
-           ,result)))))
+  (let* ((ri (gsym))
+         (tab (gsym))
+         (file (gsym))
+         (nentries (gsym))
+         (entry (gsym))
+         (fields
+          (list->set
+           (append
+            (cl-ana.makeres::find-dependencies lfields 'field)
+            (cl-ana.makeres::find-dependencies body 'field))
+           #'eq))
+         (field->symbol
+          (let ((result (make-hash-table)))
+            (loop
+               for f in fields
+               do (setf (gethash f result)
+                        (gsym)))
+            result))
+         (field->type
+          (let ((result (make-hash-table)))
+            (loop
+               for ft in fields-types
+               do (destructuring-bind (field type &rest counts)
+                      ft
+                    (setf (gethash field result)
+                          (cons type counts))))
+            result))
+         (unfielded-body
+          (sublis (loop
+                     for field being the hash-keys in field->symbol
+                     for symbol being the hash-values in field->symbol
+                     collecting
+                       (let ((counts
+                              (second (gethash field field->type))))
+                         (if counts
+                             (cons `(field ,field)
+                                   symbol)
+                             (cons `(field ,field)
+                                   `(value ,symbol)))))
+                  body
+                  :test #'equal))
+         (unfielded-lfields
+          (sublis (loop
+                     for field being the hash-keys in field->symbol
+                     for symbol being the hash-values in field->symbol
+                     collecting
+                       (let ((counts
+                              (second (gethash field field->type))))
+                         (if counts
+                             (cons `(field ,field)
+                                   symbol)
+                             (cons `(field ,field)
+                                   `(value ,symbol)))))
+                  lfields
+                  :test #'equal)))
+    (reset-gsym)
+    `(exe-fn ,exe-path
+             `((function
+                int main ()
+                (varcons tfile ,',file
+                         (str ,',ttree-path)
+                         (str "READ"))
+                (var (pointer ttree) ,',tab
+                     (typecast (pointer ttree)
+                               (method ,',file Get
+                                       (str ,',ttree-name))))
+                ,@',(loop
+                       for field being the hash-keys in field->symbol
+                       for symbol being the hash-values in field->symbol
+                       appending
+                       ;; need handler-case here detecting destructuring
+                       ;; bind failure
+                         (destructuring-bind (type &rest counts)
+                             (gethash field field->type)
+                           `((var (pointer ,type) ,symbol
+                                  ,(if counts
+                                       `(new[] ,type ,@counts)
+                                       `(new ,type)))
+                             (pmethod ,tab
+                                      set-branch-address
+                                      (str ,(string field))
+                                      ,symbol))))
+                ,@',inits
+
+                ;; main loop
+                (var long ,',nentries
+                     (pmethod ,',tab
+                              entries))
+                (for (var long ,',entry 0)
+                     (< ,',entry ,',nentries)
+                     (incf ,',entry)
+                     (pmethod ,',tab get-event
+                              ,',entry)
+                     ,@',unfielded-lfields
+                     ,@',unfielded-body)
+
+                ;; posts
+                ,@',posts
+                ;; Cleanup:
+                (method ,',file root-close)
+                (return 0)))
+             :output *standard-output*)))
 
 ;;;; Special operators
 

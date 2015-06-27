@@ -35,6 +35,15 @@
           (cpp name)
           (mapcar #'cpp args)))
 
+;; Array declaration
+(defcpp vararray (type name dimensions &rest inits)
+  (with-output-to-string (s)
+    (format s "~a ~a~{[~a]~}" (cpp type) (cpp name)
+            (mapcar #'cpp dimensions))
+    (when inits
+      (format s " = {~{~a~^,~}}" (mapcar #'cpp inits)))
+    (format s ";")))
+
 ;; Returns a type which requires many type-tokens
 (defcpp type (&rest type-tokens)
   (format nil "~{~a~^ ~}"

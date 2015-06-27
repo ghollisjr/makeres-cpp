@@ -267,5 +267,53 @@
                                    field_names)))
        :output *standard-output*))
 
-;; (defun pass-test ()
-;;   (cpp-table-pass ))
+(defun gen-pass-test-data ()
+  (exe "/home/ghollisjr/test/gen-cpp-table-pass-data"
+       ((function
+         int main ()
+         (var (pointer double) x
+              (new[] double 4))
+         (var int y)
+         (varcons tfile file
+                  (str "/home/ghollisjr/test/cpp-table-pass-test.root")
+                  (str "RECREATE"))
+         (varcons ttree tab
+                  (str "h10")
+                  (str "h10"))
+         (method tab branch
+                 (str "x")
+                 x)
+         (method tab branch
+                 (str "y")
+                 (address y))
+         (for (var int i 0) (< i 5) (incf i)
+              (for (var int j 0) (< j 4) (incf j)
+                   (setf (aref x j)
+                         (sqrt (+ (typecast double i)
+                                  (typecast double j)))))
+              (setf y i)
+              (method tab fill))
+         (method tab write)
+         (method file root-close)
+         (return 0)))
+       :output *standard-output*))
+
+(defun pass-test ()
+  (cpp-table-pass
+      "/home/ghollisjr/test/cpp-table-pass-test.root" "h10"
+      "/home/ghollisjr/test/cpp-table-pass-test"
+      ((|x| double 4)
+       (|y| int))
+      ((var int sum 0))
+      ()
+      ((var double xsum 0)
+       (for (var int j 0) (< j 4) (incf j)
+            (setf xsum
+                  (+ xsum
+                     (aref (field |x|) j)))))
+    (<< cout (field |y|) endl)
+    (setf sum
+          (+ sum
+             xsum
+             (field |y|)))
+    (<< cout sum endl)))

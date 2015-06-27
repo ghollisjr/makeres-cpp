@@ -1,3 +1,19 @@
++ Finish cpp-table-pass.  Last step seems to be using TChain with
+  multiple input files rather than a single TTree source.  Already
+  partially working on that.
+
++ Write C++ methods for reading logged Lisp targets from disk.
+  Histograms already can be read, but lists, hash-tables, etc. cannot.
+  Some kind of communication from Lisp back to C++ will inevitably be
+  required, so this must be handled in some way.
+
++ Either
+
+  1. Support output to HDF5 datasets in C++
+
+  2. Rely on root2hdf to convert ROOT datasets to HDF5, could feasibly
+     be incorporated into a special cpp-table operator
+
 - get-bin-center using TAxis is not working as I thought it would for
   any histogram with more than one axis.  The axis needs its own index
   to find the bin center, not the global bin index.  I need to use the

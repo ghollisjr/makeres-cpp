@@ -34,6 +34,7 @@
 (defcpp nbinsz () "GetNbinsZ")
 (defcpp axis.nbins () "GetNbins")
 (defcpp entries () "GetEntries")
+(defcpp get-event () "GetEvent")
 (defcpp Get () "Get")
 (defcpp GetObject () "GetObject")
 
