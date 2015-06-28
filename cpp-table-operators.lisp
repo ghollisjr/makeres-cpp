@@ -63,8 +63,8 @@ respectively."
   `(deflfieldsfn ',table-id ',lfields :op ,op))
 
 ;; Physical table reductions:
-(defmacro ctab (source inits opener
-                &body body)
+(defmacro cpp-tab (source inits opener
+                   &body body)
   "Operator for generating physical tables via table-pass.  Returns a
 table-pass form (so you can run macroexpand on it in a graph
 transformation).
@@ -97,11 +97,18 @@ table (will be supplied the result table)."
          ,@body))))
 
 ;; Logical table reductions:
-(defmacro lctab (source inits &body body)
+(defmacro cpp-ltab (source inits &body body)
   "Like tab, but for logical tables.  Returns nil.  Requires special
   treatment since logical tables don't yield a result.  Arguments are
   simply for tracking the logical table."
   nil)
+
+(defun cpp-srctab (paths name)
+  "Returns ROOT table object for use as source table"
+  (make-root-table :paths paths
+                   :fields-types
+                   (read-fields-types paths name)
+                   :name name))
 
 ;;;; NOTES
 ;;;;

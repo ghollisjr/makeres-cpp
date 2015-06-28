@@ -283,10 +283,3 @@ into the input of the next command."
   (with-open-file (file path
                         :direction :input)
     (read file)))
-
-(defun cpp-srctab (paths name)
-  "Returns list with information on "
-  (make-root-table :paths paths
-                   :fields-types
-                   (read-fields-types paths name)
-                   :name name))

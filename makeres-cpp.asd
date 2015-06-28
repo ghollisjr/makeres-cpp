@@ -41,7 +41,8 @@
                ;; Read/Write ROOT histogram via HDF5 cl-ana formatting
                (:file "histogram")
 
-               ;; Commented until I get these parts working
+               ;; ROOT table type:
+               (:file "root-table")
                
                ;; ;; C++ table operators
                (:file "cpp-table-operators")
