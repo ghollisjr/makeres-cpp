@@ -36,6 +36,9 @@
    :exe
    :exe-fn
    :program
-   :program-fn))
+   :program-fn
+
+   ;; Table operators
+   :cpp-table-pass))
 
 (cl-ana.package-utils:use-package-group :cl-ana :makeres-cpp)

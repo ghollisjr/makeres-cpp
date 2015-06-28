@@ -271,8 +271,7 @@
   (exe "/home/ghollisjr/test/gen-cpp-table-pass-data"
        ((function
          int main ()
-         (var (pointer double) x
-              (new[] double 4))
+         (vararray double x (4))
          (var int y)
          (varcons tfile file
                   (str "/home/ghollisjr/test/cpp-table-pass-test.root")
@@ -282,7 +281,8 @@
                   (str "h10"))
          (method tab branch
                  (str "x")
-                 x)
+                 (address x)
+                 (str "x[4]/D"))
          (method tab branch
                  (str "y")
                  (address y))
@@ -300,20 +300,25 @@
 
 (defun pass-test ()
   (cpp-table-pass
-      "/home/ghollisjr/test/cpp-table-pass-test.root" "h10"
-      "/home/ghollisjr/test/cpp-table-pass-test"
-      ((|x| double 4)
-       (|y| int))
-      ((var int sum 0))
-      ()
-      ((var double xsum 0)
-       (for (var int j 0) (< j 4) (incf j)
-            (setf xsum
-                  (+ xsum
-                     (aref (field |x|) j)))))
-    (<< cout (field |y|) endl)
-    (setf sum
-          (+ sum
-             xsum
-             (field |y|)))
-    (<< cout sum endl)))
+   '("/home/ghollisjr/test/cpp-table-pass-test.root") "h10"
+   "/home/ghollisjr/test/cpp-table-pass-test"
+   '((|x| double 4)
+     (|y| int))
+   '((var double sum 0))
+   '((<< cout (str "Sum=") sum endl))
+   '((var double xsum 0)
+     (for (var int j 0) (< j 4) (incf j)
+      (setf xsum
+       (+ xsum
+          (aref (field |x|) j)))))
+   '(progn
+     (<< cout (str "x={"))
+     (for (var int j 0) (< j 3) (incf j)
+      (<< cout (aref (field |x|) j) (str ",")))
+     (<< cout (aref (field |x|) 3) (str "}") endl)
+     (<< cout (str "xsum=") xsum endl)
+     (<< cout (str "y=") (field |y|) endl)
+     (setf sum
+      (+ sum
+       xsum
+       (field |y|))))))

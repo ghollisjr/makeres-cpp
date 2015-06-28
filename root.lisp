@@ -169,6 +169,12 @@
    (defcpp set-branch-address ()
      "SetBranchAddress")))
 
+(with-root-header "TChain.h"
+  ((defcpp tchain ()
+     "TChain")
+   (defcpp add-file ()
+     "AddFile")))
+
 ;;;; TFiles
 (with-root-header "TFile.h"
   ((defcpp tfile ()

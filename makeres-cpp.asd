@@ -44,7 +44,7 @@
                ;; Commented until I get these parts working
                
                ;; ;; C++ table operators
-               ;; (:file "cpp-table-operators")
+               (:file "cpp-table-operators")
                ;; ;; makeres transformation stuff
                ;; (:file "cpptrans")
                

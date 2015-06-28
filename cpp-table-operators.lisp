@@ -121,10 +121,10 @@ table (will be supplied the result table)."
 ;; general purpose table iteration, more functional than do-table,
 ;; used as implementation backbone for all makeres-table
 ;; transformations
-(defmacro cpp-table-pass (ttree-paths ttree-name exe-path
-                          fields-types
-                          inits posts lfields
-                          &body body)
+(defun cpp-table-pass (ttree-paths ttree-name exe-path
+                       fields-types
+                       inits posts lfields
+                       &rest body)
   "Loops over table with external bindings inits and final execuation
 forms posts, executing body once per row.
 
@@ -147,114 +147,113 @@ independent lfields and inits, no matter what symbol names you choose.
 If you need a common lfield, use deflfields.  If you need a common
 init binding, at the moment the only solution is to combine the
 targets manually (usually more conceptually clear incidentally)."
-  ;; local macro fields will accept either symbol or string, and will
-  ;; convert a symbol into a lower-case string for use in fields.
-
-  ;; Having difficulties expanding the body to get the fields which
-  ;; are present, trying to use &environment with expand macro but not
-  ;; much luck so far.
-  (let* ((ri (gsym))
-         (tab (gsym))
-         (file (gsym))
-         (nentries (gsym))
-         (entry (gsym))
-         (fields
-          (list->set
-           (append
-            (cl-ana.makeres::find-dependencies lfields 'field)
-            (cl-ana.makeres::find-dependencies body 'field))
-           #'eq))
-         (field->symbol
-          (let ((result (make-hash-table)))
-            (loop
-               for f in fields
-               do (setf (gethash f result)
-                        (gsym)))
-            result))
-         (field->type
-          (let ((result (make-hash-table)))
-            (loop
-               for ft in fields-types
-               do (destructuring-bind (field type &rest counts)
-                      ft
-                    (setf (gethash field result)
-                          (cons type counts))))
-            result))
-         (unfielded-body
-          (sublis (loop
-                     for field being the hash-keys in field->symbol
-                     for symbol being the hash-values in field->symbol
-                     collecting
-                       (let ((counts
-                              (second (gethash field field->type))))
-                         (if counts
-                             (cons `(field ,field)
-                                   symbol)
-                             (cons `(field ,field)
-                                   `(value ,symbol)))))
-                  body
-                  :test #'equal))
-         (unfielded-lfields
-          (sublis (loop
-                     for field being the hash-keys in field->symbol
-                     for symbol being the hash-values in field->symbol
-                     collecting
-                       (let ((counts
-                              (second (gethash field field->type))))
-                         (if counts
-                             (cons `(field ,field)
-                                   symbol)
-                             (cons `(field ,field)
-                                   `(value ,symbol)))))
-                  lfields
-                  :test #'equal)))
-    (reset-gsym)
-    `(exe-fn ,exe-path
-             `((function
-                int main ()
-                (varcons tfile ,',file
-                         (str ,',ttree-path)
-                         (str "READ"))
-                (var (pointer ttree) ,',tab
-                     (typecast (pointer ttree)
-                               (method ,',file Get
-                                       (str ,',ttree-name))))
-                ,@',(loop
+  (labels (;; Compares symbols as if they're in the same package
+           (sym-equal (x y)
+             (tree-equal x y
+                         :test (lambda (x y)
+                                 (or (and (symbolp x)
+                                          (symbolp y)
+                                          (equal (keywordify x)
+                                                 (keywordify y)))
+                                     (equal x y))))))
+    (let* ((tab (gsym))
+           (nentries (gsym))
+           (entry (gsym))
+           (fields
+            (list->set
+             (append
+              (cl-ana.makeres::find-dependencies lfields 'field)
+              (cl-ana.makeres::find-dependencies body 'field))
+             #'sym-equal))
+           (field->symbol
+            (let ((result (make-hash-table)))
+              (loop
+                 for f in fields
+                 do (setf (gethash (keywordify f) result)
+                          (gsym)))
+              result))
+           (field->type
+            (let ((result (make-hash-table)))
+              (loop
+                 for ft in fields-types
+                 do (destructuring-bind (field type &rest counts)
+                        ft
+                      (setf (gethash (keywordify field) result)
+                            (cons type counts))))
+              result))
+           (unfielded-body
+            (sublis (loop
                        for field being the hash-keys in field->symbol
                        for symbol being the hash-values in field->symbol
-                       appending
-                       ;; need handler-case here detecting destructuring
-                       ;; bind failure
-                         (destructuring-bind (type &rest counts)
-                             (gethash field field->type)
-                           `((var (pointer ,type) ,symbol
-                                  ,(if counts
-                                       `(new[] ,type ,@counts)
-                                       `(new ,type)))
-                             (pmethod ,tab
-                                      set-branch-address
-                                      (str ,(string field))
-                                      ,symbol))))
-                ,@',inits
+                       collecting
+                         (let ((counts
+                                (second (gethash (keywordify field)
+                                                 field->type))))
+                           (if counts
+                               (cons `(field ,field)
+                                     symbol)
+                               (cons `(field ,field)
+                                     `(value ,symbol)))))
+                    body
+                    :test #'sym-equal))
+           (unfielded-lfields
+            (sublis (loop
+                       for field being the hash-keys in field->symbol
+                       for symbol being the hash-values in field->symbol
+                       collecting
+                         (let ((counts
+                                (second (gethash (keywordify field)
+                                                 field->type))))
+                           (if counts
+                               (cons `(field ,field)
+                                     symbol)
+                               (cons `(field ,field)
+                                     `(value ,symbol)))))
+                    lfields
+                    :test #'sym-equal)))
+      (reset-gsym)
+      (exe-fn exe-path
+              `((function
+                 int main ()
+                 (varcons tchain ,tab (str ,ttree-name) (str ,ttree-name))
+                 ,@(loop
+                      for path in ttree-paths
+                      collecting `(method ,tab add-file (str ,path)))
+                 ,@(loop
+                      for field being the hash-keys in field->symbol
+                      for symbol being the hash-values in field->symbol
+                      appending
+                      ;; need handler-case here detecting destructuring
+                      ;; bind failure
+                        (destructuring-bind (type &rest counts)
+                            (gethash (keywordify field) field->type)
+                          `((var (pointer ,type) ,symbol
+                                 ,(if counts
+                                      `(new[] ,type ,@counts)
+                                      `(new ,type)))
+                            (method ,tab
+                                    set-branch-address
+                                    (str ,(string field))
+                                    ,symbol))))
+                 ,@inits
 
-                ;; main loop
-                (var long ,',nentries
-                     (pmethod ,',tab
+                 ;; main loop
+                 (var long ,nentries
+                      (method ,tab
                               entries))
-                (for (var long ,',entry 0)
-                     (< ,',entry ,',nentries)
-                     (incf ,',entry)
-                     (pmethod ,',tab get-event
-                              ,',entry)
-                     ,@',unfielded-lfields
-                     ,@',unfielded-body)
+                 (for (var long ,entry 0)
+                      (< ,entry ,nentries)
+                      (incf ,entry)
+                      (method ,tab get-event
+                              ,entry)
+                      ,@unfielded-lfields
+                      ,@unfielded-body)
 
-                ;; posts
-                ,@',posts
-                ;; Cleanup:
-                (method ,',file root-close)
-                (return 0)))
-             :output *standard-output*)))
+                 ;; posts
+                 ,@posts
+                 ;; Cleanup:
+                 (return 0)))
+              :output *standard-output*))))
 
 ;;;; Special operators
 
