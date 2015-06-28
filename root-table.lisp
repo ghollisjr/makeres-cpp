@@ -272,7 +272,7 @@ into the input of the next command."
   fields-types ; field names and types
   name)
 
-(defmethod save-object ((tab root-source-table) path)
+(defmethod save-object ((tab root-table) path)
   (with-open-file (file path
                         :direction :output
                         :if-does-not-exist :create
