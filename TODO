@@ -1,4 +1,14 @@
-+ Finish cpp-table-pass.  Last step seems to be using TChain with
++ Need seamless interaction between Lisp objects and C++ code.  Could
+  possibly have two separate transformations, one handling the
+  interaction between Lisp objects and C++, and one actually compiling
+  the table passes.
+
+  Only support a subset of Lisp objects which can be easily used in
+  C++, e.g. only support lists with real numbers so that they can be
+  assumed to be std::vector<double> objects, or hash-tables can be
+  std::map<> objects with a few different kinds supported.
+
+- Finish cpp-table-pass.  Last step seems to be using TChain with
   multiple input files rather than a single TTree source.  Already
   partially working on that.
 
@@ -13,6 +23,9 @@
 
   2. Rely on root2hdf to convert ROOT datasets to HDF5, could feasibly
      be incorporated into a special cpp-table operator
+
+  Going with 2 for now, haven't written actual code but added to
+  INSTALL.txt notes
 
 - get-bin-center using TAxis is not working as I thought it would for
   any histogram with more than one axis.  The axis needs its own index

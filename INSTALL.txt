@@ -1,0 +1,3 @@
+Simply place the project somewhere ASDF will find it and make sure you
+have root2hdf installed (http://www.github.com/ghollisjr/root2hdf) and
+able to be found via the PATH variable.
