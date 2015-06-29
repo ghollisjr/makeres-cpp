@@ -1,6 +1,6 @@
 ;;;; makeres-cpp is a Common Lisp data analysis library.
 ;;;; Copyright 2015 Gary Hollis
-;;;; 
+;;;;
 ;;;; This file is part of makeres-cpp.
 ;;;;
 ;;;; makeres-cpp is free software: you can redistribute it and/or
@@ -11,19 +11,15 @@
 ;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;;; General Public License for more details.
-;;;; 
+;;;;
 ;;;; You should have received a copy of the GNU General Public License
 ;;;; along with makeres-cpp.  If not, see
 ;;;; <http://www.gnu.org/licenses/>.
-;;;; 
+;;;;
 ;;;; You may contact Gary Hollis (me!) via email at
 ;;;; ghollisjr@gmail.com
 
 (in-package :makeres-cpp)
-
-;; allows results to be converted into C++ values via lisp->cpp
-(defcpp res (id)
-  (lisp->cpp (resfn id)))
 
 (defvar *print-progress* nil
   "Set this to nil if you don't want to see progress messages printed;
@@ -32,47 +28,50 @@ print a progress update message.  Note that this should only be used
 for tables which know their size (so CSV tables don't work with
 this).")
 
-(defun table-reduction? (expr)
-  "True if expr is a dotab, ltab or tab expression"
+(defun cpp-table-reduction? (expr)
+  "True if expr is a cpp-dotab, cpp-ltab or cpp-tab expression"
   (when (and expr
              (listp expr))
     (destructuring-bind (progn &rest forms) expr
       (when (listp (first forms))
         (let ((tab-op (first (first forms))))
-          (member tab-op (list 'table-pass 'dotab 'ltab 'tab)
+          (member tab-op (list ;; 'cpp-table-pass
+                          'cpp-dotab
+                          'cpp-ltab
+                          'cpp-tab)
                   :test 'eq))))))
 
-(defun table-pass? (expr)
-  "True if expr is a table-pass expression"
+(defun cpp-table-pass? (expr)
+  "True if expr is a cpp-table-pass expression"
   (when expr
     (destructuring-bind (progn &rest forms) expr
       (let ((tab-op (first (first forms))))
-        (eq tab-op 'table-pass)))))
+        (eq tab-op 'cpp-table-pass)))))
 
-(defun dotab? (expr)
-  "True if expr is a dotab expression"
+(defun cpp-dotab? (expr)
+  "True if expr is a cpp-dotab expression"
   (when expr
     (destructuring-bind (progn &rest forms) expr
       (let ((tab-op (first (first forms))))
-        (eq tab-op 'dotab)))))
+        (eq tab-op 'cpp-dotab)))))
 
-(defun tab? (expr)
+(defun cpp-tab? (expr)
   "True if expr is a tab expression"
   (when (and expr
              (listp expr))
     (destructuring-bind (progn &rest forms) expr
       (when (listp (first forms))
         (let ((tab-op (first (first forms))))
-          (eq tab-op 'tab))))))
+          (eq tab-op 'cpp-tab))))))
 
-(defun ltab? (expr)
-  "True if expr is an ltab expression"
+(defun cpp-ltab? (expr)
+  "True if expr is an cpp-ltab expression"
   (when (and expr
              (listp expr))
     (destructuring-bind (progn &rest forms) expr
       (when (listp (first forms))
         (let ((tab-op (first (first forms))))
-          (eq tab-op 'ltab))))))
+          (eq tab-op 'cpp-ltab))))))
 
 (defun resform? (expr)
   "Returns true if expr is of the form (res x)"
@@ -92,27 +91,27 @@ this).")
       expr
       (list 'res expr)))
 
-(defun table-reduction-source (expr)
+(defun cpp-table-reduction-source (expr)
   "Returns source for table reduction, nil if expr is not of a
 table-reduction."
-  (when (table-reduction? expr)
+  (when (cpp-table-reduction? expr)
     (cadadr expr)))
 
-(defun (setf table-reduction-source) (value expr)
-  (when (table-reduction? expr)
+(defun (setf cpp-table-reduction-source) (value expr)
+  (when (cpp-table-reduction? expr)
     (setf (cadadr expr)
           value)))
 
-(defun table-reduction-inits (expr)
+(defun cpp-table-reduction-inits (expr)
   "Returns init bindings when expr is a table-reduction, nil
 otherwise."
-  (when (table-reduction? expr)
+  (when (cpp-table-reduction? expr)
     (destructuring-bind (progn tab-form) expr
       (elt tab-form
            2))))
 
 ;; call on table-pass or dotab only
-(defun table-reduction-return (expr)
+(defun cpp-table-reduction-return (expr)
   (when (or (dotab? expr)
             (table-pass? expr))
     (destructuring-bind (progn tab-form) expr

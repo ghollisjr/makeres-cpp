@@ -63,7 +63,7 @@ respectively."
   `(deflfieldsfn ',table-id ',lfields :op ,op))
 
 ;; Physical table reductions:
-(defmacro cpp-tab (source inits opener
+(defmacro cpp-tab (source inits path
                    &body body)
   "Operator for generating physical tables via table-pass.  Returns a
 table-pass form (so you can run macroexpand on it in a graph
@@ -83,24 +83,17 @@ inits are used for bindings outside the table-pass loop.
 body will be placed in a macrolet which macrolets push-field,
 accepting all arguments to table-push-field minus the destination
 table (will be supplied the result table)."
-  (let ((closure (gsym))
-        (result (gsym)))
-    `(table-pass ,source
-         (,@inits
-          (,closure ,opener)
-          (,result (funcall ,closure :write)))
-         (funcall ,closure :read)
-         ()
-       (macrolet ((push-fields (&rest fields)
-                    `(table-push-fields ,',result
-                       ,@fields)))
-         ,@body))))
+  nil)
 
 ;; Logical table reductions:
 (defmacro cpp-ltab (source inits &body body)
   "Like tab, but for logical tables.  Returns nil.  Requires special
   treatment since logical tables don't yield a result.  Arguments are
   simply for tracking the logical table."
+  nil)
+
+(defmacro cpp-dotab (source inits posts return &body body)
+  "return "
   nil)
 
 (defun cpp-srctab (paths name)

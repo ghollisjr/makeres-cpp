@@ -8,6 +8,19 @@
   assumed to be std::vector<double> objects, or hash-tables can be
   std::map<> objects with a few different kinds supported.
 
+  For now, going with single transformation.  Steps are
+
+  1. Find (res ...) forms within body
+  2. Assign gsyms to each ID
+  3. Determine type information and optionally write targets in
+     special format for ease of C++ reading
+  4. Generate init forms reading the necessary results from disk
+  5. Replace (res ...) forms within body with proper gsyms
+
+  Compiled code with contain a cpp-table-pass form, but will not
+  solely consist of it due to needing to determine type information at
+  run time from Lisp.
+
 - Finish cpp-table-pass.  Last step seems to be using TChain with
   multiple input files rather than a single TTree source.  Already
   partially working on that.
