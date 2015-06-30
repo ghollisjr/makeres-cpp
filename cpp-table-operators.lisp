@@ -63,7 +63,7 @@ respectively."
   `(deflfieldsfn ',table-id ',lfields :op ,op))
 
 ;; Physical table reductions:
-(defmacro cpp-tab (source inits path
+(defmacro cpp-tab (source fields-types inits path
                    &body body)
   "Operator for generating physical tables via table-pass.  Returns a
 table-pass form (so you can run macroexpand on it in a graph
@@ -71,18 +71,15 @@ transformation).
 
 source is the source table to be iterated over.
 
-opener should be a closure which accepts a single keyword argument.
-When given keyword argument :read it should return an open table
-object ready for reading, and when given keyword argument :write
-should return a table object ready for writing.  opener should handle
-all necessary calls to table-close as well as managing e.g. open
-files.
+fields-types is a list of (field type &rest counts) describing the
+field names, types and for arrays the dimensionalities of the columns
+in the output table.
 
 inits are used for bindings outside the table-pass loop.
 
-body will be placed in a macrolet which macrolets push-field,
-accepting all arguments to table-push-field minus the destination
-table (will be supplied the result table)."
+body will have push-field operator available, accepting all arguments
+to table-push-field minus the destination table (will be supplied the
+result table)."
   nil)
 
 ;; Logical table reductions:
