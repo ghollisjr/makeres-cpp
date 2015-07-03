@@ -26,40 +26,22 @@
   "Map from table id to any lfields defined via deflfields.")
 
 ;; logical lfield definition:
-(defun deflfieldsfn (table-id lfields &key (op :add))
-  "function version of deflfields"
+(defun cpp-deflfieldsfn (table-id lfields)
+  "function version of cpp-deflfields"
   (when (not (gethash (project) *proj->tab->lfields*))
     (setf (gethash (project) *proj->tab->lfields*)
           (make-hash-table :test 'equal)))
   (symbol-macrolet ((lfs (gethash table-id
                                   (gethash (project)
                                            *proj->tab->lfields*))))
-    (case op
-      (:set
-       (setf lfs
-             lfields))
-      (:add
-       (setf lfs
-             (reduce (lambda (result next)
-                       (adjoin next result
-                               :key #'first
-                               :test #'eq))
-                     lfields
-                     :initial-value
-                     (remove-if (lambda (lf)
-                                  (member (first lf) lfields
-                                          :key #'first
-                                          :test #'eq))
-                                lfs))))))
+    (setf lfs
+          lfields))
   nil)
 
 ;; and the macro:
-(defmacro deflfields (table-id lfields &key (op :add))
-  "Sets logical fields for table-id; can be referenced via field by
-any reductions of the table.
-
-op can be :add or :set, resulting in adding lfields or setting lfields
-respectively."
+(defmacro cpp-deflfields (table-id lfields)
+  "Sets logical fields for table-id; unlike deflfields, fields are not
+referenced via field but by their symbols alone."
   `(deflfieldsfn ',table-id ',lfields :op ,op))
 
 ;; Physical table reductions:
