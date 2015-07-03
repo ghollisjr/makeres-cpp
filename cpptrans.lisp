@@ -107,27 +107,30 @@ table-reduction."
 otherwise."
   (when (cpp-table-reduction? expr)
     (destructuring-bind (progn tab-form) expr
-      (elt tab-form
-           2))))
+      (cond
+        ((cpp-table-pass? expr)
+         (elt tab-form 5))
+        (t
+         (elt tab-form
+              2))))))
 
-;; call on table-pass or dotab only
+;; call on cpp-dotab only
 (defun cpp-table-reduction-return (expr)
-  (when (or (dotab? expr)
-            (table-pass? expr))
+  (when (cpp-dotab? expr)
     (destructuring-bind (progn tab-form) expr
       (elt tab-form 3))))
 
-(defun table-reduction-body (expr)
-  (when (table-reduction? expr)
+(defun cpp-table-reduction-body (expr)
+  (when (cpp-table-reduction? expr)
     (destructuring-bind (progn tab-form) expr
       (cond
-        ((table-pass? expr)
+        ((cpp-table-pass? expr)
+         (nthcdr 8 tab-form))
+        ((cpp-dotab? expr)
          (nthcdr 5 tab-form))
-        ((dotab? expr)
-         (nthcdr 4 tab-form))
-        ((tab? expr)
-         (nthcdr 4 tab-form))
-        ((ltab? expr)
+        ((cpp-tab? expr)
+         (nthcdr 5 tab-form))
+        ((cpp-ltab? expr)
          (nthcdr 3 tab-form))))))
 
 (defun immediate-reductions (target-table tab)
@@ -136,15 +139,19 @@ table"
   (remove-if-not (lambda (id)
                    (let* ((tar (gethash id target-table))
                           (expr (target-expr tar)))
-                     (and (table-reduction? expr)
-                          (equal (unres (table-reduction-source expr))
+                     (and (cpp-table-reduction? expr)
+                          (equal (unres (cpp-table-reduction-source expr))
                                  tab))))
                  (hash-keys target-table)))
 
-(defun ltab-chains (target-table src)
-  "Returns all ltab chains stemming from src"
+(defun cpp-ltab-chains (target-table src)
+  "Returns all cpp-ltab chains stemming from src.  A cpp-ltab chain is
+simply a list of cpp-ltab ids which are chained reductions of either
+cpp-ltabs or the source table with id src along with the first
+non-cpp-ltab id which is a reduction of the next to last cpp-ltab in
+the chain."
   (labels ((rec (red &optional chain)
-             (if (ltab? (target-expr (gethash red target-table)))
+             (if (cpp-ltab? (target-expr (gethash red target-table)))
                  (let* ((imms (immediate-reductions target-table red)))
                    (mapcan (lambda (r)
                              (copy-list (rec r (cons red chain))))
@@ -154,23 +161,24 @@ table"
               (rec r (list src)))
             (immediate-reductions target-table src))))
 
-(defun ltab-chained-reductions (target-table src)
-  "Returns all reductions directly from ltab chains stemming from src"
+(defun cpp-ltab-chained-reductions (target-table src)
+  "Returns all reductions directly from cpp-ltab chains stemming from
+src"
   (mapcar #'alexandria:last-elt
-          (ltab-chains target-table src)))
+          (cpp-ltab-chains target-table src)))
 
 (defun necessary-pass-reductions (target-table tab)
   "Returns list of reductions of a table which must be computed via a
 pass over the table; equivalent to the union set of all immediate
-non-ltab reductions and any reductions chained directly to tab via
+non-cpp-ltab reductions and any reductions chained directly to tab via
 logical tables."
   (list->set
    (append (remove-if (lambda (id)
-                        (ltab?
+                        (cpp-ltab?
                          (target-expr
                           (gethash id target-table))))
                       (immediate-reductions target-table tab))
-           (ltab-chained-reductions target-table tab))
+           (cpp-ltab-chained-reductions target-table tab))
    #'equal))
 
 (defun chained-reductions (target-table src)
@@ -183,7 +191,7 @@ connected via a chain of reductions from src."
                         (chained-reductions target-table red))
                       (remove-if-not
                        (lambda (red)
-                         (table-reduction?
+                         (cpp-table-reduction?
                           (target-expr (gethash red target-table))))
                        imm-reds))))))
 
@@ -232,8 +240,8 @@ non-ignored sources."
        for id being the hash-keys in target-table
        for tar being the hash-values in target-table
        do (let ((expr (target-expr tar)))
-            (when (table-reduction? expr)
-              (let* ((raw-src (table-reduction-source expr))
+            (when (cpp-table-reduction? expr)
+              (let* ((raw-src (cpp-table-reduction-source expr))
                      (src (if (and (listp raw-src)
                                    (eq (first raw-src) 'res))
                               (second raw-src)
@@ -266,7 +274,7 @@ non-ignored sources."
                            :initial-value
                            (let ((expr
                                   (target-expr (gethash id target-table))))
-                             (if (table-reduction? expr)
+                             (if (cpp-table-reduction? expr)
                                  (destructuring-bind (progn tab-form) expr
                                    (cl-ana.makeres::find-dependencies (cddr tab-form)
                                                                       'res))
@@ -279,7 +287,7 @@ non-ignored sources."
         (not (member y (gethash x depmap)
                      :test #'equal))))))
 
-(defun removed-ltab-source-dep< (target-table)
+(defun removed-cpp-ltab-source-dep< (target-table)
   (let ((depmap (make-hash-table :test 'equal)))
     (labels ((rec (id)
                ;; returns full list of dependencies for id, ignoring
@@ -297,7 +305,7 @@ non-ignored sources."
                            :initial-value
                            (let ((expr
                                   (target-expr (gethash id target-table))))
-                             (if (ltab? expr)
+                             (if (cpp-ltab? expr)
                                  (destructuring-bind (progn tab-form) expr
                                    (cl-ana.makeres::find-dependencies (cddr tab-form)
                                                                       'res))
@@ -321,7 +329,7 @@ non-ignored sources."
 (shadowing-import 'cl-ana.makeres-table::node-subcontent)
 
 ;; must be given complete target graph, not just the null-stat targets
-(defun table-reduction-context-tree (graph src ids)
+(defun cpp-table-reduction-context-tree (graph src ids)
   "Returns tree of contexts each pass would be inside if collapsed up
 to src.  Physical table reductions are treated as reductions with
 themselves as context."
@@ -332,7 +340,7 @@ themselves as context."
                (when (and (gethash id graph)
                           (not (equal id src)))
                  (let ((source (unres
-                                (table-reduction-source
+                                (cpp-table-reduction-source
                                  (target-expr
                                   (gethash id graph))))))
                    (setf (gethash source source->reds)
@@ -354,10 +362,10 @@ themselves as context."
                        (append (remove-if
                                 (lambda (red)
                                   (or (target-stat (gethash red graph))
-                                      (ltab? (target-expr (gethash red graph)))))
+                                      (cpp-ltab? (target-expr (gethash red graph)))))
                                 reds)
                                (when (and (gethash source graph)
-                                          (tab? (target-expr (gethash source graph)))
+                                          (cpp-tab? (target-expr (gethash source graph)))
                                           (member source ids :test #'equal))
                                  (list source))))
                       ;; reductions used as sources
@@ -382,7 +390,7 @@ themselves as context."
                                                :test #'equal))
                                      need-context-reds))
                         children)))
-             (tab-cleanup (tree)
+             (cpp-tab-cleanup (tree)
                ;; Ensures that the tree obtained from source->tree
                ;; properly stores physical table nodes.  Physical
                ;; table nodes should never be content of the immediate
@@ -391,37 +399,37 @@ themselves as context."
                (let* ((source (node-id tree))
                       (content (node-content tree))
                       (newcontent (remove-if (lambda (id)
-                                               (and (tab?
+                                               (and (cpp-tab?
                                                      (target-expr (gethash id graph)))
                                                     (not (equal id source))))
                                              content))
-                      (tabs (remove-if-not (lambda (id)
-                                             (and (tab?
-                                                   (target-expr (gethash id graph)))
-                                                  (not (equal id source))))
-                                           content))
+                      (cpp-tabs (remove-if-not (lambda (id)
+                                                 (and (cpp-tab?
+                                                       (target-expr (gethash id graph)))
+                                                      (not (equal id source))))
+                                               content))
                       (children (copy-tree (node-children tree))))
                  ;; modify children appropriately
                  (loop
-                    for tab in tabs
+                    for cpp-tab in cpp-tabs
                     do (loop
                           for child in children
                           when (and (equal (node-id child)
-                                           tab)
-                                    (not (member tab (node-content child))))
+                                           cpp-tab)
+                                    (not (member cpp-tab (node-content child))))
                           do (progn
-                               (push tab (node-content child))
+                               (push cpp-tab (node-content child))
                                (return))
-                          finally (push (node tab (list tab))
+                          finally (push (node cpp-tab (list cpp-tab))
                                         children)))
                  ;; return result
                  (apply #'node
                         source
                         newcontent
-                        (mapcar #'tab-cleanup
+                        (mapcar #'cpp-tab-cleanup
                                 children)))))
       (mapcar #'build-source->reds ids)
-      (tab-cleanup
+      (cpp-tab-cleanup
        (source->tree src)))))
 
 ;; some shitty code walking
@@ -477,7 +485,7 @@ from pass up to src."
            ;; reduction ids needing to be placed in this context, and
            ;; sub context trees.
            (context-tree
-            (table-reduction-context-tree graph src pass))
+            (cpp-table-reduction-context-tree graph src pass))
            ;; set of reductions generated:
            (reductions
             (remove src
@@ -501,7 +509,7 @@ from pass up to src."
             (make-hash-table :test 'equal))
            ;; map from tab reduction to expanded form (needed due to
            ;; with-gensyms in the body)
-           (tab-expanded-expr (make-hash-table :test 'equal)))
+           (cpp-tab-expanded-expr (make-hash-table :test 'equal)))
       ;; Initialize context maps:
       (macrolet ((setht (place k)
                    `(setf (gethash ,k ,place)
@@ -527,11 +535,11 @@ from pass up to src."
               ;; returns:
               (setf (gethash r reduction->return)
                     (let ((expr (target-expr tar)))
-                      (when (not (ltab? expr))
+                      (when (not (cpp-ltab? expr))
                         (let ((res
-                               (table-reduction-return
-                                (if (tab? expr)
-                                    (setf (gethash r tab-expanded-expr)
+                               (cpp-table-reduction-return
+                                (if (cpp-tab? expr)
+                                    (setf (gethash r cpp-tab-expanded-expr)
                                           `(progn
                                              ,(macroexpand-1 (second expr))))
                                     expr))))
@@ -539,14 +547,14 @@ from pass up to src."
               ;; inits:
               (loop
                  for (initsym . initexpr)
-                 in (table-reduction-inits
+                 in (cpp-table-reduction-inits
                      (let ((expr (target-expr tar)))
-                       (if (tab? expr)
-                           (gethash r tab-expanded-expr)
+                       (if (cpp-tab? expr)
+                           (gethash r cpp-tab-expanded-expr)
                            expr)))
                  do (progn
                       (setf (gethash initsym initsym->gsym)
-                            (gsym 'tabletrans))
+                            (gsym))
                       (setf (gethash initsym initsym->expr)
                             (copy-list
                              ;; symbol-macrolet to use gsym bindings
@@ -586,17 +594,17 @@ from pass up to src."
                                     collect (list s gsym))
                               ,(gethash r reduction->return)))))))
              ;; map from table to lfields for table:
-             (tab->lfields
-              (gethash (project) *proj->tab->lfields*))
+             (cpp-tab->lfields
+              (gethash (project) *proj->cpp-tab->lfields*))
              ;; lfields expanded:
              (lfields
               ;; lfields from source
-              (when tab->lfields
+              (when cpp-tab->lfields
                 (mapcar (lambda (binding)
                           (cons (first binding)
                                 (mapcar #'expand-res-macros
                                         (rest binding))))
-                        (gethash src tab->lfields))))
+                        (gethash src cpp-tab->lfields))))
              ;; resulting pass body:
              (body
               (labels
@@ -605,16 +613,16 @@ from pass up to src."
                             (expr (target-expr (gethash c graph)))
                             (push-field-bindings
                              (cond
-                               ((tab? expr)
-                                (find-push-fields (gethash c tab-expanded-expr)))
-                               ((ltab? expr)
-                                (find-push-fields (table-reduction-body expr)))))
+                               ((cpp-tab? expr)
+                                (find-push-fields (gethash c cpp-tab-expanded-expr)))
+                               ((cpp-ltab? expr)
+                                (find-push-fields (cpp-table-reduction-body expr)))))
                             (push-field-syms
                              (cars push-field-bindings))
                             (push-field-gsyms
                              (loop
                                 for b in push-field-syms
-                                collecting (gsym 'tabletrans)))
+                                collecting (gsym)))
                             (push-field->gsym
                              (let ((ht (make-hash-table :test 'eq)))
                                (loop
@@ -624,16 +632,16 @@ from pass up to src."
                                            gsym))
                                ht))
                             (lfields
-                             (let ((tab->lfields
-                                    (gethash (project) *proj->tab->lfields*)))
-                               (when tab->lfields
-                                 (gethash c tab->lfields))))
+                             (let ((cpp-tab->lfields
+                                    (gethash (project) *proj->cpp-tab->lfields*)))
+                               (when cpp-tab->lfields
+                                 (gethash c cpp-tab->lfields))))
                             (lfield-syms
                              (cars lfields))
                             (lfield-gsyms
                              (loop
                                 for l in lfield-syms
-                                collecting (gsym 'tabletrans)))
+                                collecting (gsym)))
                             (lfield->gsym
                              (let ((ht (make-hash-table :test 'eq)))
                                (loop
@@ -709,31 +717,31 @@ from pass up to src."
                                              ((expr (target-expr
                                                      (gethash id graph))))
                                              (if
-                                              (tab? expr)
+                                              (cpp-tab? expr)
                                               `((push-fields
                                                  ,@(find-push-fields
-                                                    (table-reduction-body
-                                                     (gethash id tab-expanded-expr)))))
-                                              (table-reduction-body expr)))))
+                                                    (cpp-table-reduction-body
+                                                     (gethash id cpp-tab-expanded-expr)))))
+                                              (cpp-table-reduction-body expr)))))
                                      (progn
                                        (node-content node)))
                                     children-exprs)
                                    :test #'equal))))
                        (if (and (not (equal c src))
-                                (table-reduction? expr))
+                                (cpp-table-reduction? expr))
                            (let ((result
                                   (replace-push-fields
                                    `(progn
-                                      ,@(table-reduction-body
-                                         (if (tab? expr)
-                                             (gethash c tab-expanded-expr)
+                                      ,@(cpp-table-reduction-body
+                                         (if (cpp-tab? expr)
+                                             (gethash c cpp-tab-expanded-expr)
                                              expr)))
                                    sub-body)))
                              result)
                            sub-body))))
                 (rec context-tree)))
-             (row-var (gsym 'table-pass))
-             (nrows-var (gsym 'table-pass))
+             (row-var (gsym))
+             (nrows-var (gsym))
              (print-pass-targets
               (when *print-progress*
                 `((let ((*print-pretty* nil))
@@ -742,7 +750,7 @@ from pass up to src."
                          for r in pass
                          collecting `(format t "~a~%" ',r))))))
              (print-pass-targets-var
-              (gsym 'table-pass))
+              (gsym))
              (print-progress-inits
               (when *print-progress*
                 `((,row-var 0)
@@ -766,16 +774,16 @@ from pass up to src."
                                     (float ,nrows-var)))))
                     (incf ,row-var))))))
         `(progn
-           (table-pass ,(if (and (listp src)
-                                 (eq (first src) 'res))
-                            src
-                            `(res ,src))
-               (,@inits
-                ,@print-progress-inits)
-               ,result-list
-               ,lfields
-             ,@print-progress
-             ,body))))))
+           (cpp-table-pass ,(if (and (listp src)
+                                     (eq (first src) 'res))
+                                src
+                                `(res ,src))
+                           (,@inits
+                            ,@print-progress-inits)
+                           ,result-list
+                           ,lfields
+                           ,@print-progress
+                           ,body))))))
 
 (defun set-pass-result-targets! (result-graph id pass)
   "Sets result-graph targets from pass so that they make use of the
@@ -802,29 +810,29 @@ true when given the key and value from ht."
                 v))
     result))
 
-(defparameter *table-binding-ops*
-  (list 'tab
-        'ltab
-        'dotab
+(defparameter *cpp-table-binding-ops*
+  (list 'cpp-tab
+        'cpp-ltab
+        'cpp-dotab
         'push-fields))
 
-(defun ensure-table-binding-ops ()
+(defun ensure-cpp-table-binding-ops ()
   (ensure-binding-ops)
   (symbol-macrolet ((binding-ops
                      (gethash (project) *proj->binding-ops*)))
     (setf binding-ops
           (list->set (append binding-ops
-                             *table-binding-ops*)))))
+                             *cpp-table-binding-ops*)))))
 
-(defun ensure-table-op-expanders ()
+(defun ensure-cpp-table-op-expanders ()
   (symbol-macrolet ((op->expander
                      (gethash (project)
                               *proj->op->expander*)))
     ;; Create table & set expanders for cl:
     (ensure-op-expanders)
     ;; Set table expanders:
-    ;; ltab
-    (setf (gethash 'ltab op->expander)
+    ;; cpp-ltab
+    (setf (gethash 'cpp-ltab op->expander)
           (lambda (expander form)
             (destructuring-bind (op source inits &rest body)
                 form
@@ -837,8 +845,8 @@ true when given the key and value from ht."
                                        (funcall expander binding))))
                              inits)
                      (mapcar expander body)))))
-    ;; tab
-    (setf (gethash 'tab op->expander)
+    ;; cpp-tab
+    (setf (gethash 'cpp-tab op->expander)
           (lambda (expander form)
             (destructuring-bind (op source inits opener &rest body)
                 form
@@ -852,8 +860,8 @@ true when given the key and value from ht."
                              inits)
                      (funcall expander opener)
                      (mapcar expander body)))))
-    ;; dotab
-    (setf (gethash 'dotab op->expander)
+    ;; cpp-dotab
+    (setf (gethash 'cpp-dotab op->expander)
           (lambda (expander form)
             (destructuring-bind (op source inits return &rest body)
                 form
@@ -879,29 +887,15 @@ true when given the key and value from ht."
                                           (funcall expander (second f)))
                                     f))))))))
 
-(defun tabletrans (target-table)
+(defun cpp-tabletrans (target-table)
   "Performs necessary graph transformations for table operators"
-  ;; Close any open tables needing recomputation:
-  (loop
-     for id being the hash-keys in target-table
-     for tar being the hash-values in target-table
-     do (let ((val (target-val tar))
-              (stat (target-stat tar)))
-          (when (and
-                 (not stat)
-                 (or (typep val 'table)
-                     (typep val 'reusable-table))
-                 (table-open-p val))
-            (table-close val))))
-
   ;; initialize operator expansion
-  (ensure-table-binding-ops)
-  (ensure-table-op-expanders)
-  ;; clear gsyms
-  (clrgsym 'tabletrans)
-  ;; establish *proj->tab->lfields*:
-  (when (not (gethash (project) *proj->tab->lfields*))
-    (setf (gethash (project) *proj->tab->lfields*)
+  (ensure-cpp-table-binding-ops)
+  (ensure-cpp-table-op-expanders)
+
+  ;; establish *proj->cpp-tab->lfields*:
+  (when (not (gethash (project) *proj->cpp-tab->lfields*))
+    (setf (gethash (project) *proj->cpp-tab->lfields*)
           (make-hash-table :test 'equal)))
   (let* ((graph (copy-target-table target-table))
          ;; special dep< for treating reductions as if they did not
@@ -912,7 +906,7 @@ true when given the key and value from ht."
           (removed-source-dep< target-table))
          ;; special dep< which only adds ltabs sources as dependencies
          ;; when used somewhere other than as the source additionally.
-         (remltab-dep< (removed-ltab-source-dep< target-table))
+         (remcpp-ltab-dep< (removed-cpp-ltab-source-dep< target-table))
          ;; result
          (result-graph
           (copy-target-table target-table))
@@ -932,17 +926,17 @@ true when given the key and value from ht."
              (when srcs
                (dolist (src srcs)
                  (push src processed-srcs)
-                 (let ((ltabs
+                 (let ((cpp-ltabs
                         (list->set
                          (alexandria:flatten
                           (mapcar #'butlast
                                   (mapcar #'rest
-                                          (ltab-chains (target-table)
-                                                       src)))))))
+                                          (cpp-ltab-chains (target-table)
+                                                           src)))))))
                    (setf processed-srcs
                          (list->set
                           (append processed-srcs
-                                  ltabs))))
+                                  cpp-ltabs))))
                  (let* (;; reductions which must be computed via a
                         ;; pass over src
                         (nec-reds
@@ -962,7 +956,7 @@ true when given the key and value from ht."
                           (mapcar
                            (lambda (pass)
                              (remove-if (lambda (p)
-                                          (ltab? (target-expr (gethash p graph))))
+                                          (cpp-ltab? (target-expr (gethash p graph))))
                                         pass))
                            (mapcar
                             (lambda (pass)
@@ -971,7 +965,7 @@ true when given the key and value from ht."
                                                        :test #'equal))
                                              pass))
                             (group-ids-by-pass
-                             graph src remltab-dep<)))))
+                             graph src remcpp-ltab-dep<)))))
                         ;; passes relative to ultimate source:
                         (ult-passes
                          (remove
@@ -984,8 +978,8 @@ true when given the key and value from ht."
                            (mapcar
                             (lambda (pass)
                               (remove-if (lambda (p)
-                                           (ltab? (target-expr
-                                                   (gethash p graph))))
+                                           (cpp-ltab? (target-expr
+                                                       (gethash p graph))))
                                          pass))
                             (mapcar
                              (lambda (pass)
@@ -1007,7 +1001,7 @@ true when given the key and value from ht."
                    (dolist (pass collapsible-passes)
                      (dolist (p pass)
                        (push p processed-reds))
-                     (let ((id (gsym 'tabletrans)))
+                     (let ((id (gsym)))
                        (setf (gethash id result-graph)
                              (make-target id
                                           (make-pass-target-expr

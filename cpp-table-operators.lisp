@@ -42,14 +42,12 @@
 (defmacro cpp-deflfields (table-id lfields)
   "Sets logical fields for table-id; unlike deflfields, fields are not
 referenced via field but by their symbols alone."
-  `(deflfieldsfn ',table-id ',lfields :op ,op))
+  `(deflfieldsfn ',table-id ',lfields))
 
 ;; Physical table reductions:
 (defmacro cpp-tab (source fields-types inits path
                    &body body)
-  "Operator for generating physical tables via table-pass.  Returns a
-table-pass form (so you can run macroexpand on it in a graph
-transformation).
+  "Operator for generating physical tables via cpp-table-pass.
 
 source is the source table to be iterated over.
 
@@ -71,8 +69,18 @@ result table)."
   simply for tracking the logical table."
   nil)
 
+;; Example usage: Histograms could be saved to file, then the return
+;; form would read the histogram from file and erase the file, finally
+;; returning the histogram.  Alternatively, finding a way to use
+;; interprocess communication to transmit the histogram such as pipes
+;; or Unix sockets could provide a better option for local computation
+;; at least.  Writing to file and then reading again is closer to what
+;; is needed for JLab code however, and all I would need to do is find
+;; a way to avoid double-writing the histogram data itself and instead
+;; just write the target metadata.
 (defmacro cpp-dotab (source inits posts return &body body)
-  "return "
+  "return should be a Lisp form which handles cleaning up or opening
+  the Lisp object to return and returning it as the output value."
   nil)
 
 (defun cpp-srctab (paths name)
