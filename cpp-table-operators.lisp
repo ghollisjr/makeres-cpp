@@ -21,19 +21,19 @@
 
 (in-package :makeres-cpp)
 
-(defvar *proj->tab->lfields*
+(defvar *proj->cpp-tab->lfields*
   (make-hash-table :test 'equal)
   "Map from table id to any lfields defined via deflfields.")
 
 ;; logical lfield definition:
 (defun cpp-deflfieldsfn (table-id lfields)
   "function version of cpp-deflfields"
-  (when (not (gethash (project) *proj->tab->lfields*))
-    (setf (gethash (project) *proj->tab->lfields*)
+  (when (not (gethash (project) *proj->cpp-tab->lfields*))
+    (setf (gethash (project) *proj->cpp-tab->lfields*)
           (make-hash-table :test 'equal)))
   (symbol-macrolet ((lfs (gethash table-id
                                   (gethash (project)
-                                           *proj->tab->lfields*))))
+                                           *proj->cpp-tab->lfields*))))
     (setf lfs
           lfields))
   nil)
@@ -198,7 +198,6 @@ targets manually (usually more conceptually clear incidentally)."
                                      `(value ,symbol)))))
                     lfields
                     :test #'sym-equal)))
-      (reset-gsym)
       (exe-fn exe-path
               `((function
                  int main ()

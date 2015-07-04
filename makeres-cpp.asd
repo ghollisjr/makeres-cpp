@@ -47,7 +47,7 @@
                ;; ;; C++ table operators
                (:file "cpp-table-operators")
                ;; ;; makeres transformation stuff
-               ;; (:file "cpptrans")
+               (:file "cpptrans")
                
                ;; Syntactic structures
                (:file "syntax")
