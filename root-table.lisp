@@ -154,7 +154,7 @@ into the input of the next command."
                                for p in paths
                                appending
                                  (list "chain.AddFile(\"" p "\");" newline))
-                            (list "chain->MakeClass(\"treeclass\");" newline
+                            (list "chain.MakeClass(\"treeclass\");" newline
                                   ".q" newline)))))
               (cd workdir)
               (with-input-from-string (stream root-commands)

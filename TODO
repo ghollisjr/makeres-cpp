@@ -1,3 +1,15 @@
++ Instead of push-fields, cpp-tab and cpp-ltab operators will support
+  two different operators, (ofield <field-symbol>) and (fill).  The
+  ofield operator will simply evaluate to the symbol being used to
+  store the output field value corresponding to that field.  This is
+  necessary for keeping the way tables are processed in ROOT as close
+  as possible to the way makeres-cpp handles them.  The fill operator
+  simply calls Fill() on the table object being produced or emulated.
+  Any collapsed pass bodies will be placed wherever the (fill)
+  operator occurs, and it will be assumed that any output values will
+  be properly established via setting the values referred by the
+  ofield operator prior to calling fill.
+
 + Need seamless interaction between Lisp objects and C++ code.  Could
   possibly have two separate transformations, one handling the
   interaction between Lisp objects and C++, and one actually compiling
