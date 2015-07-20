@@ -39,6 +39,10 @@
    :program-fn
 
    ;; Table operators
-   :cpp-table-pass))
+   :cpp-table-pass
+
+   ;; Project settings:
+   :set-cpp-work-path
+   ))
 
 (cl-ana.package-utils:use-package-group :cl-ana :makeres-cpp)

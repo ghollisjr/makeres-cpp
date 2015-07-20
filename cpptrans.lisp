@@ -21,12 +21,17 @@
 
 (in-package :makeres-cpp)
 
-(defvar *print-progress* nil
+(defvar *cpp-print-progress* nil
   "Set this to nil if you don't want to see progress messages printed;
 set this to an integer value to specify the number of rows at which to
 print a progress update message.  Note that this should only be used
 for tables which know their size (so CSV tables don't work with
 this).")
+
+(defvar *cpp-work-path*)
+
+(defun set-cpp-work-path (path)
+  (setf *cpp-work-path* path))
 
 (defun cpp-table-reduction? (expr)
   "True if expr is a cpp-dotab, cpp-ltab or cpp-tab expression"
