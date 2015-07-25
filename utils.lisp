@@ -25,14 +25,9 @@
   (make-hash-table :test 'equal)
   "Map from project to binary directory path for project")
 
-(defparameter *proj->cpp*
-  (make-hash-table :test 'equal)
+(defparameter *opsymbol->opfunction*
+  (make-hash-table :test 'eq)
   "Map from project to map from opsymbol to opfunction.")
-
-(defun ensure-project ()
-  (when (not (gethash *project-id* *proj->cpp*))
-    (setf (gethash *project-id* *proj->cpp*)
-          (make-hash-table :test 'eq))))
 
 (defmacro defcpp (opname lambda-list &body body)
   "Defines an operator in the current project which takes arguments as
@@ -42,22 +37,19 @@ resulting string for the generated C++ code.
 &body will be replaced with &rest in the lambda-list since it will be
 supplied to the lambda operator."
   (alexandria:with-gensyms (ops)
-    `(symbol-macrolet ((,ops (gethash *project-id*
-                                      *proj->cpp*)))
-       (ensure-project)
-       (setf (gethash (if (equal (package-name
-                                  (symbol-package ',opname))
-                                 "KEYWORD")
-                          ',opname
-                          (intern (string ',opname)
-                                  :makeres-cpp))
-                      ,ops)
-             (lambda ,(mapcar (lambda (token)
-                                (if (eq token '&body)
-                                    '&rest
-                                    token))
-                              lambda-list)
-               ,@body)))))
+    `(setf (gethash (if (equal (package-name
+                                (symbol-package ',opname))
+                               "KEYWORD")
+                        ',opname
+                        (intern (string ',opname)
+                                :makeres-cpp))
+                    *opsymbol->opfunction*)
+           (lambda ,(mapcar (lambda (token)
+                              (if (eq token '&body)
+                                  '&rest
+                                  token))
+                            lambda-list)
+             ,@body))))
 
 ;; Rules for cpp function:
 ;;
@@ -72,15 +64,15 @@ supplied to the lambda operator."
 
 (defun cpp (form)
   "Looks up either 1. Form if form is an atom, or 2. First element of
-form if form is a list in the operator table *proj->cpp* and calls the
-function mapped there with no arguments for atoms or the remaining
-arguments in the form for lists.  If there is no defined operator
-corresponding to the first element of the list, standard function call
-notation is assumed and the symbol is downcased as a string for the
-function name."
+form if form is a list in the operator table *opsymbol->opfunction*
+and calls the function mapped there with no arguments for atoms or the
+remaining arguments in the form for lists.  If there is no defined
+operator corresponding to the first element of the list, standard
+function call notation is assumed and the symbol is downcased as a
+string for the function name."
   (handler-case
       (when form
-        (let ((sym->fn (gethash *project-id* *proj->cpp*)))
+        (let ((sym->fn *opsymbol->opfunction*))
           (if (atom form)
               (let ((form (if (and (symbolp form)
                                    (not (equal

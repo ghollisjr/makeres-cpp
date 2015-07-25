@@ -940,7 +940,7 @@ true when given the key and value from ht."
                      (funcall expander return)
                      body))))))
 
-(defun cpp-tabletrans (target-table)
+(defun cpptrans (target-table)
   "Performs necessary graph transformations for table operators"
   ;; reset gsym map:
   (reset-gsym)
@@ -1056,7 +1056,7 @@ true when given the key and value from ht."
                    (dolist (pass collapsible-passes)
                      (dolist (p pass)
                        (push p processed-reds))
-                     (let ((id (gsym)))
+                     (let ((id (gensym)))
                        (setf (gethash id result-graph)
                              (make-target id
                                           (make-pass-target-expr

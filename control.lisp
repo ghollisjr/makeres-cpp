@@ -21,11 +21,14 @@
 
 (in-package :makeres-cpp)
 
+;; guaranteed context
 (defcpp progn (&body body)
   (with-output-to-string (out)
+    (format out "{~%")
     (loop
        for expr in body
-       do (format out "~a;~%" (cpp expr)))))
+       do (format out "~a;~%" (cpp expr)))
+    (format out "}")))
 
 (defcpp let (bindings &body body)
   (with-output-to-string (out)
@@ -72,6 +75,9 @@
       (format out "else {~%")
       (format out "~a;~%" (cpp else))
       (format out "}~%"))))
+
+(defcpp when (test &rest body)
+  (cpp `(if ,test (progn ,@body))))
 
 ;; Transliteration of C++ for
 (defcpp for (init test incr &body body)

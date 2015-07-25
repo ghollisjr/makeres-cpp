@@ -322,18 +322,3 @@
       (+ sum
        xsum
        (field |y|))))))
-
-;;;; Test project section:
-
-(defproject makeres-cpp
-    "/home/ghollisjr/test/makeres-cpp/project"
-  (list #'makeres-macro #'makeres-cpp)
-  (fixed-cache 5))
-
-(ensure-cpp-table-binding-ops)
-(ensure-cpp-table-op-expanders)
-
-(set-cpp-work-path (work-path "cpp"))
-
-(setf *cpp-print-progress* 10)
-

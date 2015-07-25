@@ -1,3 +1,22 @@
++ Should create eval operator which actually evaluates a form as Lisp
+  first and then passes it to cpp.
+
++ cpp-{tab,ltab,dotab} should support uniq operator which generates a
+  unique symbol for that particular target.  Should require even the
+  initialization to use this form, e.g.
+
+  (var int (uniq x) 0)
+
+  would have (uniq x) replaced with a unique symbol, and anywhere in
+  the target body the form (uniq x) would be replaced with the same
+  unique symbol.  (uniq y) for example would have a different symbol
+  than (uniq x), but everywhere in that target (uniq y) would evaluate
+  to the same symbol.
+
++ cpp-tab results will use the target ID as the tree name since having
+  the same name is problematic for generating efficient C++ code
+  (requires copious calls to cd()).
+
 + Instead of push-fields, cpp-tab and cpp-ltab operators will support
   two different operators, (ofield <field-symbol>) and (fill).  The
   ofield operator will simply evaluate to the symbol being used to

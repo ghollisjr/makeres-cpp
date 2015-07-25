@@ -43,7 +43,8 @@
 ;; Need this due to Lisp strings needing literal double-quotes inside
 ;; the string in order to be properly output to the C++ file.
 (defcpp str (lisp-string)
-  (format nil "\"~a\"" lisp-string))
+  (format nil "\"~a\""
+          (cpp lisp-string)))
 
 ;;;; Function definition
 
@@ -120,3 +121,7 @@
 
 ;; NULL
 (defcpp NULL () "NULL")
+
+;; Evaluating a Lisp form:
+(defcpp eval (form)
+  (cpp (eval form)))
