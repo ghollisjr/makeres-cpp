@@ -282,7 +282,11 @@ non-ignored sources."
                         (adjoin src
                                 srcs
                                 :test #'equal)))))))
-    (set-difference srcs reds)))
+    (print 'srcs)
+    (print srcs)
+    (print 'reds)
+    (print reds)
+    (set-difference srcs reds :test #'equal)))
 
 (defun removed-source-dep< (target-table)
   (let ((depmap (make-hash-table :test 'equal)))
@@ -635,6 +639,10 @@ from pass up to src."
                                                       `((vararray ,type ,field-gsym (,max-length)))
                                                       `((var ,type ,field-gsym)))
                                                   `((method ,tree branch
+                                                            (str ,(string field))
+                                                            ,(if max-length
+                                                                 field-gsym
+                                                                 `(address ,field-gsym))
                                                             (str ,(if max-length
                                                                       (format nil
                                                                               "~a[~a]/~a"
@@ -645,10 +653,7 @@ from pass up to src."
                                                                       (format nil
                                                                               "~a/~a"
                                                                               (string field)
-                                                                              (gethash type *root-branch-type-map*))))
-                                                            ,(if max-length
-                                                                 field-gsym
-                                                                 `(address ,field-gsym)))))))))))))
+                                                                              (gethash type *root-branch-type-map*)))))))))))))))
                          (cpp-table-reduction-inits
                           (target-expr (gethash r graph)))
                          )))))
@@ -666,7 +671,8 @@ from pass up to src."
                                                      cpp-tab->file-tree-gsyms)))
                              (destructuring-bind (file tree)
                                  file-tree
-                               `((method ,tree write)
+                               `((method ,file cd)
+                                 (method ,tree write)
                                  (method ,file root-close)))))
                           ((cpp-dotab? expr)
                            (cpp-table-reduction-posts expr))
@@ -934,9 +940,9 @@ true when given the key and value from ht."
   ;; Setup exe path
   (when (not *cpp-work-path*)
     (error "C++ work path not set"))
-  
+
   (ensure-directories-exist (cpp-exe-path))
-  
+
   ;; establish *proj->cpp-tab->lfields*:
   (when (not (gethash (project) *proj->cpp-tab->lfields*))
     (setf (gethash (project) *proj->cpp-tab->lfields*)
@@ -967,6 +973,8 @@ true when given the key and value from ht."
                   (set-difference
                    (ultimate-source-tables graph processed-srcs)
                    processed-srcs)))
+             (print srcs)
+             (print processed-srcs)
              (when srcs
                (dolist (src srcs)
                  (push src processed-srcs)
@@ -975,7 +983,7 @@ true when given the key and value from ht."
                          (alexandria:flatten
                           (mapcar #'butlast
                                   (mapcar #'rest
-                                          (cpp-ltab-chains (target-table)
+                                          (cpp-ltab-chains target-table
                                                            src)))))))
                    (setf processed-srcs
                          (list->set
