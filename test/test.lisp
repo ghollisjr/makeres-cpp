@@ -51,7 +51,7 @@
 (defres (src p b)
   (cpp-dotab (res src)
       ((varcons TH2D (uniq hist)
-                (str "hist") (str "hist")
+                (str (uniq hist)) (str (uniq hist))
                 100 0d0 3d0
                 100 0d0 1.2d0)
        (vararray string (uniq names) (2)
@@ -64,11 +64,11 @@
       (load-object 'sparse-histogram
                    (eval (work-path "src-p-b.h5")))
     (for (var int i 0) (< i (field |gpart|)) (incf i)
-         (<< cout
-             (aref (field |p|) i)
-             (str " ")
-             (aref (field |b|) i)
-             endl)
+         ;; (<< cout
+         ;;     (aref (field |p|) i)
+         ;;     (str " ")
+         ;;     (aref (field |b|) i)
+         ;;     endl)
          (method (uniq hist) fill
                  (aref (field |p|) i)
                  (aref (field |b|) i)))))
@@ -112,7 +112,7 @@
 (defres (filtered p b)
   (cpp-dotab (res filtered)
       ((varcons TH2D (uniq hist)
-                (str "hist") (str "hist")
+                (str (uniq hist)) (str (uniq hist))
                 100 0d0 3d0
                 100 0d0 1.2d0)
        (vararray string (uniq names) (2)

@@ -39,16 +39,18 @@ program's code."
 
 (defun required-functions (code)
   "Returns list of required functions for code"
-  (cond
-    ((null code) nil)
-    ((listp code)
-     (apply #'append
-            (required-functions (first code))
-            (mapcar #'required-functions (rest code))))
-    ((atom code)
-     (if (gethash code *cpp-funs*)
-         (list code)
-         nil))))
+  (list->set
+   (cond
+     ((null code) nil)
+     ((listp code)
+      (apply #'append
+             (required-functions (first code))
+             (mapcar #'required-functions (rest code))))
+     ((atom code)
+      (if (gethash code *cpp-funs*)
+          (list code)
+          nil)))
+   #'eq))
 
 (defun prototype (function-code)
   "Returns C++ code for the prototype of a function definition"

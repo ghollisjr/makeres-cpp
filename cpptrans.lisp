@@ -35,6 +35,10 @@ this).")
 (defun set-cpp-work-path (path)
   (setf *cpp-work-path* path))
 
+(defun cpp-exe-path ()
+  (merge-pathnames "exe"
+                   (make-pathname :directory *cpp-work-path*)))
+
 (defun cpp-table-reduction? (expr)
   "True if expr is a cpp-dotab, cpp-ltab or cpp-tab expression"
   (when (and expr
@@ -782,7 +786,7 @@ from pass up to src."
                (row-var (gsym))
                (nrows-var (gsym))
                (print-pass-targets
-                (when *print-progress*
+                (when *cpp-print-progress*
                   `((<< cout
                         (str "Pass over ")
                         (str ,(mkstr src))
@@ -828,7 +832,7 @@ from pass up to src."
                                       (root-table-name
                                        ,src-target)
                                       ;; only for testing
-                                      "/home/ghollisjr/test/cpptrans-exe"
+                                      (cpp-exe-path)
                                       (cpp-tab-fields-types->src-fields-types
                                        (root-table-fields-types
                                         ,src-target))
@@ -927,6 +931,12 @@ true when given the key and value from ht."
   (ensure-cpp-table-binding-ops)
   (ensure-cpp-table-op-expanders)
 
+  ;; Setup exe path
+  (when (not *cpp-work-path*)
+    (error "C++ work path not set"))
+  
+  (ensure-directories-exist (cpp-exe-path))
+  
   ;; establish *proj->cpp-tab->lfields*:
   (when (not (gethash (project) *proj->cpp-tab->lfields*))
     (setf (gethash (project) *proj->cpp-tab->lfields*)
