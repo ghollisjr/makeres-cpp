@@ -1,4 +1,9 @@
-+ Should create eval operator which actually evaluates a form as Lisp
++ make-table-pass-expr must create pass return list in a new way since
+  cpp-table-pass is a function and therefore does not support return
+  forms.  Modification should be very simple, just return a progn with
+  the cpp-table-pass occurring prior to the return list.
+
+- Should create eval operator which actually evaluates a form as Lisp
   first and then passes it to cpp.
 
 + cpp-{tab,ltab,dotab} should support uniq operator which generates a

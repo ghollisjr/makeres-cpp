@@ -34,7 +34,7 @@
 
 (defproject makeres-cpp
     "/home/ghollisjr/test/makeres-cpp/project"
-  (list #'macrotrans #'cpptrans)
+  (list #'macrotrans #'branchtrans #'tabletrans #'cpptrans #'progresstrans)
   (fixed-cache 5))
 
 (ensure-cpp-table-binding-ops)
@@ -42,17 +42,42 @@
 
 (set-cpp-work-path "/home/ghollisjr/test/makeres-cpp/cpp-work")
 
-(setf *cpp-print-progress* 10)
+(setf *cpp-print-progress* 10000)
 
 (defres src
   (cpp-srctab (list "/home/ghollisjr/test/a1ntp_36516_pass1.a00.rzn.root.skim")
               "h10"))
 
+(defres (src p b)
+  (cpp-dotab (res src)
+      ((varcons TH2D (uniq hist)
+                (str "hist") (str "hist")
+                100 0d0 3d0
+                100 0d0 1.2d0)
+       (vararray string (uniq names) (2)
+                 (str "p")
+                 (str "b")))
+      ((write_histogram (address (uniq hist))
+                        2
+                        (str (eval (work-path "src-p-b.h5")))
+                        (uniq names)))
+      (load-object 'sparse-histogram
+                   (eval (work-path "src-p-b.h5")))
+    (for (var int i 0) (< i (field |gpart|)) (incf i)
+         (<< cout
+             (aref (field |p|) i)
+             (str " ")
+             (aref (field |b|) i)
+             endl)
+         (method (uniq hist) fill
+                 (aref (field |p|) i)
+                 (aref (field |b|) i)))))
+
 (defres filtered
   (cpp-tab (res src)
-      (list (list "gpart" "int")
-            (list "p" "float" :length "gpart" :max-length "4")
-            (list "b" "float" :length "gpart" :max-length "4"))
+      (list (list "gpart" "Int_t")
+            (list "p" "Float_t" :length "gpart" :max-length "4")
+            (list "b" "Float_t" :length "gpart" :max-length "4"))
       ()
       (work-path "filtered.root")
     (let ((int num_neutral 0)
@@ -72,6 +97,8 @@
                  (or (= num_neutral 0)
                      (= num_neutral 1)))
         (for (var int i 0) (< i (field |gpart|)) (incf i)
+             (setf (ofield |gpart|)
+                   (field |gpart|))
              (setf (aref (ofield |p|)
                          i)
                    (aref (field |p|)
@@ -80,7 +107,7 @@
                          i)
                    (aref (field |b|)
                          i)))
-        (fill)))))
+        (push-fields)))))
 
 (defres (filtered p b)
   (cpp-dotab (res filtered)
@@ -95,8 +122,15 @@
                         2
                         (str (eval (work-path "filtered-p-b.h5")))
                         (uniq names)))
-      (load-object 'sparse-histogram (work-path "filtered-p-b.h5"))
+      (load-object 'sparse-histogram
+                   (eval (work-path "filtered-p-b.h5")))
     (for (var int i 0) (< i (field |gpart|)) (incf i)
          (method (uniq hist) fill
                  (aref (field |p|) i)
                  (aref (field |b|) i)))))
+
+(defres (filtered subset)
+  (cpp-ltab (res filtered) ()
+    (when (< (aref (field |p|) 0)
+             0.4d0)
+      (push-fields))))

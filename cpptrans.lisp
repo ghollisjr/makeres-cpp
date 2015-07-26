@@ -21,6 +21,8 @@
 
 (in-package :makeres-cpp)
 
+(declaim (optimize (debug 3)))
+
 (defvar *cpp-print-progress* nil
   "Set this to nil if you don't want to see progress messages printed;
 set this to an integer value to specify the number of rows at which to
@@ -125,7 +127,12 @@ otherwise."
 (defun cpp-table-reduction-return (expr)
   (when (cpp-dotab? expr)
     (destructuring-bind (progn tab-form) expr
-      (elt tab-form 3))))
+      (elt tab-form 4))))
+
+(defun cpp-table-reduction-posts (expr)
+  (when (cpp-dotab? expr)
+    (destructuring-bind (progn form) expr
+      (elt form 3))))
 
 (defun cpp-table-reduction-body (expr)
   (when (cpp-table-reduction? expr)
@@ -139,6 +146,16 @@ otherwise."
          (nthcdr 5 tab-form))
         ((cpp-ltab? expr)
          (nthcdr 3 tab-form))))))
+
+(defun cpp-tab-fields-types (expr)
+  (when (cpp-tab? expr)
+    (destructuring-bind (progn form) expr
+      (elt form 2))))
+
+(defun cpp-tab-path (expr)
+  (when (cpp-tab? expr)
+    (destructuring-bind (progn form) expr
+      (elt form 4))))
 
 (defun immediate-reductions (target-table tab)
   "Returns list of immediately dependent table reductions for a
@@ -439,43 +456,8 @@ themselves as context."
       (cpp-tab-cleanup
        (source->tree src)))))
 
-;; some shitty code walking
-(defun find-push-fields (form)
-  "Returns the list of all argument lists given to all instances of
-push-fields in the form which are not within a macrolet definition."
-  (when (and form
-             (listp form))
-    (cond
-      ((eq (first form)
-           'push-fields)
-       (list (copy-list (rest form))))
-      ((eq (first form)
-           'macrolet)
-       (mapcan #'find-push-fields (rest (rest form))))
-      (t
-       (append (find-push-fields (car form))
-               (find-push-fields (cdr form)))))))
-
-(defun replace-push-fields (form replacements)
-  "Replaces push-fields within form with replacement as long as it's
-not inside a macrolet definition"
-  (let ((replacements (copy-tree replacements)))
-    (labels ((rec (frm)
-               (if (and frm
-                        (listp frm))
-                   (cond
-                     ((eq (first frm)
-                          'push-fields)
-                      (pop replacements))
-                     ((eq (first frm)
-                          'macrolet)
-                      `(macrolet ,(second frm)
-                         ,@(mapcar #'rec (rest (rest frm)))))
-                     (t
-                      (cons (rec (first frm))
-                            (rec (rest frm)))))
-                   frm)))
-      (rec form))))
+(shadowing-import 'cl-ana.makeres-table::find-push-fields)
+(shadowing-import 'cl-ana.makeres-table::replace-push-fields)
 
 ;; must be given complete target graph, not just the null-stat targets
 (defun make-pass-target-expr (graph src pass)
@@ -523,344 +505,341 @@ from pass up to src."
                                   (cons (node-id n)
                                         subcontent)))))
                        (rec context-tree)))))
-           ;; map from reduction id to map from init binding variable
-           ;; to gsym
-           (reduction->initsym->gsym
-            (make-hash-table :test 'equal))
-           ;; map from reduction id to map from init binding variable to
-           ;; form.
-           (reduction->initsym->expr
+           ;; map from reduction id to map from uniq variable to gsym
+           (reduction->uniqsym->gsym
             (make-hash-table :test 'equal))
            ;; map from reduction to return form:
            (reduction->return
             (make-hash-table :test 'equal)))
-      ;; Initialize context maps:
-      (macrolet ((setht (place k)
-                   `(setf (gethash ,k ,place)
-                          (make-hash-table :test 'equal))))
+      (flet ((replace-uniqsyms (id expr)
+               (let ((uniqsym->gsym
+                      (gethash id reduction->uniqsym->gsym)))
+                 (when uniqsym->gsym
+                   (sublis
+                    (loop
+                       for u being the hash-keys in uniqsym->gsym
+                       for gsym being the hash-values in uniqsym->gsym
+                       collecting (cons `(uniq ,u) gsym))
+                    expr
+                    :test #'equal)))))
+        ;; Initialize context maps:
+        (macrolet ((setht (place k)
+                     `(setf (gethash ,k ,place)
+                            (make-hash-table :test 'equal))))
+          (loop
+             for r in nodes
+             do (progn
+                  (setht reduction->uniqsym->gsym r)
+                  (setht reduction->return r))))
+        ;; Make maps from uniqsyms to gsyms for each reduction as well
+        ;; as map from reduction to return form
         (loop
            for r in nodes
-           do (progn
-                (setht reduction->initsym->gsym r)
-                (setht reduction->initsym->expr r)
-                (setht reduction->return r))))
-      ;; Make maps from initsyms to gsyms and expressions for each
-      ;; reduction (reduction->initsym->gsym,
-      ;; reduction->initsym->expr) as well as map from reduction to
-      ;; return form
-      (loop
-         for r in nodes
-         do (let ((initsym->gsym
-                   (gethash r reduction->initsym->gsym))
-                  (initsym->expr
-                   (gethash r reduction->initsym->expr))
-                  (tar (gethash r graph))
-                  (processed-initsym-bindings nil))
-              ;; returns:
-              (setf (gethash r reduction->return)
-                    (let ((expr (target-expr tar)))
-                      (when (not (cpp-ltab? expr))
-                        (let ((res
-                               (cpp-table-reduction-return
-                                (if (cpp-tab? expr)
-                                    (setf (gethash r tab-expanded-expr)
-                                          `(progn
-                                             ,(macroexpand-1 (second expr))))
-                                    expr))))
-                          res))))
-              ;; inits:
-              (loop
-                 for (initsym . initexpr)
-                 in (table-reduction-inits
-                     (let ((expr (target-expr tar)))
-                       (if (tab? expr)
-                           (gethash r tab-expanded-expr)
-                           expr)))
-                 do (progn
-                      (setf (gethash initsym initsym->gsym)
-                            (gsym 'tabletrans))
-                      (setf (gethash initsym initsym->expr)
-                            (copy-list
-                             ;; symbol-macrolet to use gsym bindings
-                             `(symbol-macrolet
-                                  ,(loop
-                                      for s in processed-initsym-bindings
-                                      collect `(,s ,(gethash s initsym->gsym)))
-                                ,@initexpr)))
-                      (push initsym processed-initsym-bindings)))))
-      ;; Make body via recursing through context tree
+           do (let ((uniqsym->gsym
+                     (gethash r reduction->uniqsym->gsym))
+                    (tar (gethash r graph))
+                    (processed-uniqsym-bindings nil))
+                ;; returns:
+                (setf (gethash r reduction->return)
+                      (let ((expr (target-expr tar)))
+                        (when (not (cpp-ltab? expr))
+                          (if (cpp-tab? expr)
+                              `(make-root-table
+                                :paths (list ,(cpp-tab-path expr))
+                                :fields-types
+                                (read-fields-types (list ,(cpp-tab-path expr))
+                                                   ,(mkstr r))
+                                :nrows (read-nrows (list ,(cpp-tab-path expr))
+                                                   ,(mkstr r))
+                                :name ,(mkstr r))
+                              (cpp-table-reduction-return expr)))))
+                ;; uniqs:
+                (loop
+                   for uniqsym in (cl-ana.makeres::find-dependencies
+                                   (target-expr tar) 'uniq)
+                   do (setf (gethash uniqsym uniqsym->gsym)
+                            (gsym)))))
+        ;; Make body via recursing through context tree
 
-      ;; * Make sure to make use of gsymed inits via symbol-macrolets in
-      ;;   pass bodies
-      (let* (;; gsymed init bindings for all reductions in pass:
-             (inits
-              (loop
-                 for r in reductions
-                 appending
-                   (let ((initsym->gsym (gethash r reduction->initsym->gsym))
-                         (initsym->expr (gethash r reduction->initsym->expr)))
-                     (loop
-                        for s being the hash-keys in initsym->gsym
-                        for gsym being the hash-values in initsym->gsym
-                        collect (list gsym (gethash s initsym->expr))))))
-             ;; list of result forms making use of any gsymed values:
-             (result-list
-              (progn
-                `(list
-                  ,@(loop
-                       for r in pass
-                       collect
-                         (let ((initsym->gsym (gethash r reduction->initsym->gsym)))
-                           `(symbol-macrolet
-                                ,(loop
-                                    for s being the hash-keys in initsym->gsym
-                                    for gsym being the hash-values in initsym->gsym
-                                    collect (list s gsym))
-                              ,(gethash r reduction->return)))))))
-             ;; map from table to lfields for table:
-             (tab->lfields
-              (gethash (project) *proj->tab->lfields*))
-             ;; lfields expanded:
-             (lfields
-              ;; lfields from source
-              (when tab->lfields
-                (mapcar (lambda (binding)
-                          (cons (first binding)
-                                (mapcar #'expand-res-macros
-                                        (rest binding))))
-                        (gethash src tab->lfields))))
-             ;; resulting pass body:
-             (body
-              (labels
-                  ((rec (node)
-                     (let* ((c (node-id node))
-                            (expr (target-expr (gethash c graph)))
-                            ;; push-field-bindings is a list of the
-                            ;; different bindings as found via
-                            ;; find-push-fields in the table pass body
-                            (push-field-bindings-list
-                             (cond
-                               ((and (tab? expr)
-                                     (not (equal c src)))
-                                (find-push-fields (gethash c tab-expanded-expr)))
-                               ((ltab? expr)
-                                (find-push-fields (table-reduction-body expr)))
-                               ;; Source table special case:
-                               (t (list nil))))
-                            (push-field-syms-list
-                             (mapcar #'cars push-field-bindings-list))
-                            (push-field-gsyms-list
-                             (loop
-                                for bs in push-field-syms-list
-                                collecting
-                                  (loop
-                                     for b in bs
-                                     collecting (gsym 'tabletrans))))
-                            ;; list of maps, one per push-fields form
-                            (push-field->gsym-list
-                             (loop
-                                for push-field-syms in push-field-syms-list
-                                for push-field-gsyms in push-field-gsyms-list
-                                collecting
-                                  (let ((ht (make-hash-table :test 'eq)))
-                                    (loop
-                                       for sym in push-field-syms
-                                       for gsym in push-field-gsyms
-                                       do (setf (gethash sym ht)
-                                                gsym))
-                                    ht)))
-                            (lfields
-                             (let ((tab->lfields
-                                    (gethash (project) *proj->tab->lfields*)))
-                               (when tab->lfields
-                                 (gethash c tab->lfields))))
-                            (lfield-syms
-                             (cars lfields))
-                            (lfield-gsyms
-                             (loop
-                                for l in lfield-syms
-                                collecting (gsym 'tabletrans)))
-                            (lfield->gsym
-                             (let ((ht (make-hash-table :test 'eq)))
-                               (loop
-                                  for lfield in lfield-syms
-                                  for gsym in lfield-gsyms
-                                  do (setf (gethash lfield ht)
-                                           gsym))
-                               ht))
-                            (lfield-bindings
-                             (when lfields
-                               (loop
-                                  for push-field-syms in push-field-syms-list
-                                  for push-field->gsym in push-field->gsym-list
-                                  appending
-                                    (mapcar
-                                     (lambda (binding)
-                                       (cons
-                                        (first binding)
-                                        (sublis
-                                         (append
-                                          (loop
-                                             for lfield in lfield-syms
-                                             when (not (eq (first binding)
-                                                           lfield))
-                                             collecting
-                                               (cons `(field ,lfield)
-                                                     (gethash lfield lfield->gsym)))
-                                          (loop
-                                             for push-field in push-field-syms
-                                             collecting
-                                               (cons `(field ,push-field)
-                                                     (gethash push-field
-                                                              push-field->gsym))))
-                                         (mapcar #'expand-res-macros
-                                                 (rest binding))
-                                         :test #'equal)))
-                                     lfields))))
-                            (olet-field-bindings-list
-                             (loop
-                                for push-field-bindings in push-field-bindings-list
-                                collecting (append push-field-bindings lfield-bindings)))
-                            (olet-field-gsyms-list
-                             (loop
-                                for push-field-gsyms in push-field-gsyms-list
-                                collecting
-                                  (append
-                                   push-field-gsyms
-                                   lfield-gsyms)))
-                            (children-exprs
-                             (when (node-children node)
-                               (mapcar #'rec
-                                       (node-children node))))
-                            (content-tab->push-field-vector
-                             (let ((result (make-hash-table :test 'equal)))
-                               (loop
-                                  for content in (node-content node)
-                                  do
-                                    (setf (gethash content result)
-                                          (map
-                                           'vector
-                                           #'identity
-                                           (loop
-                                              for push-field->gsym
-                                              in push-field->gsym-list
-                                              for push-fields
-                                              in
-                                                (find-push-fields
-                                                 (table-reduction-body
-                                                  (gethash content tab-expanded-expr)))
-                                              collecting
-                                                (loop
-                                                   for (field binding)
-                                                   in push-fields
-                                                   collecting
-                                                     (list field
-                                                           (gethash field
-                                                                    push-field->gsym)))))))
-                               result))
-                            (sub-bodies
-                             (loop
-                                for olet-field-bindings in olet-field-bindings-list
-                                for olet-field-gsyms in olet-field-gsyms-list
-                                for content-index from 0
-                                collect
-                                ;; create push-fields and lfields bindings:
-                                  `(olet ,(loop
-                                             for (field form) in olet-field-bindings
-                                             for gsym in olet-field-gsyms
-                                             collect `(,gsym ,form))
-                                     ;; replace (field x) with x for x for every
-                                     ;; x in the push-field-bindings
-                                     ,@(sublis
+        (let* (;; gsymed field bindings for all cpp-tabs in pass:
+               (cpp-tab->fields
+                (let ((result (make-hash-table :test 'equal)))
+                  (loop
+                     for n in nodes
+                     do (setf (gethash n result)
+                              (cl-ana.makeres::find-dependencies
+                               (target-expr (gethash n graph))
+                               'ofield)))
+                  result))
+               ;; gsyms for tree and file for cpp-tabs
+               (cpp-tab->file-tree-gsyms
+                (let ((result (make-hash-table :test 'equal)))
+                  (loop
+                     for n in nodes
+                     when (cpp-tab? (target-expr (gethash n graph)))
+                     do (setf (gethash n result)
+                              (list (gsym) (gsym))))
+                  result))
+               (cpp-tab->field->gsym
+                (let ((result (make-hash-table :test 'equal)))
+                  (loop
+                     for n being the hash-keys in cpp-tab->fields
+                     for fields being the hash-values in cpp-tab->fields
+                     do
+                       (symbol-macrolet ((field->gsym (gethash n result)))
+                         (setf field->gsym (make-hash-table :test 'equal))
+                         (loop
+                            for f in fields
+                            do (let ((gsym (gsym)))
+                                 (setf (gethash f field->gsym)
+                                       gsym)
+                                 (setf (gethash (string f) field->gsym)
+                                       gsym)))))
+                  result))
+               (inits
+                (loop
+                   for r in reductions
+                   appending
+                     (replace-uniqsyms
+                      r
+                      (let ((expr (target-expr (gethash r graph))))
+                        (append
+                         (when (cpp-tab? expr)
+                           (let ((file-tree (gethash r
+                                                     cpp-tab->file-tree-gsyms))
+                                 (pathform `(str (eval ,(cpp-tab-path expr)))))
+                             (destructuring-bind (file tree)
+                                 file-tree
+                               `((varcons TFile ,file
+                                          ,pathform
+                                          (str "RECREATE"))
+                                 (varcons TTree ,tree
+                                          (str ,(mkstr r))
+                                          (str ,(mkstr r)))
+                                 ,@(let ((field->gsym
+                                          (gethash r cpp-tab->field->gsym)))
                                         (loop
-                                           for gsym in olet-field-gsyms
-                                           for (field form) in olet-field-bindings
-                                           collect (cons `(field ,field) gsym))
-                                        (append
-                                         (mapcar
-                                          (lambda (id)
-                                            `(symbol-macrolet
-                                                 ,(let ((initsym->gsym
-                                                         (gethash
-                                                          id
-                                                          reduction->initsym->gsym)))
-                                                       (when initsym->gsym
-                                                         (loop
-                                                            for s being the hash-keys
-                                                            in initsym->gsym
-                                                            for gsym being the hash-values
-                                                            in initsym->gsym
-                                                            collecting (list s gsym))))
-                                               ,@(let
-                                                  ((expr (target-expr
-                                                          (gethash id graph))))
-                                                  (if
-                                                   (tab? expr)
-                                                   `((push-fields
-                                                      ,@(aref
-                                                         (gethash id content-tab->push-field-vector)
-                                                         content-index)))
-                                                   (table-reduction-body expr)))))
-                                          (node-content node))
-                                         children-exprs)
-                                        :test #'equal)))))
-                       (if (and (not (equal c src))
-                                (table-reduction? expr))
-                           (let ((result
-                                  (replace-push-fields
-                                   `(progn
-                                      ,@(table-reduction-body
-                                         (if (tab? expr)
-                                             (gethash c tab-expanded-expr)
-                                             expr)))
-                                   sub-bodies)))
-                             result)
-                           (first sub-bodies)))))
-                (rec context-tree)))
-             (row-var (gsym 'table-pass))
-             (nrows-var (gsym 'table-pass))
-             (print-pass-targets
-              (when *print-progress*
-                `((let ((*print-pretty* nil))
-                    (format t "Pass over ~a to compute:~%" ',src)
+                                           for field-type in (eval (cpp-tab-fields-types expr))
+                                           appending
+                                             (destructuring-bind (field type &key length max-length)
+                                                 field-type
+                                               (let ((field-gsym
+                                                      (gethash field
+                                                               field->gsym)))
+                                                 (append
+                                                  (if max-length
+                                                      `((vararray ,type ,field-gsym (,max-length)))
+                                                      `((var ,type ,field-gsym)))
+                                                  `((method ,tree branch
+                                                            (str ,(if max-length
+                                                                      (format nil
+                                                                              "~a[~a]/~a"
+                                                                              (string field)
+                                                                              length
+                                                                              (gethash type
+                                                                                       *root-branch-type-map*))
+                                                                      (format nil
+                                                                              "~a/~a"
+                                                                              (string field)
+                                                                              (gethash type *root-branch-type-map*))))
+                                                            ,(if max-length
+                                                                 field-gsym
+                                                                 `(address ,field-gsym)))))))))))))
+                         (cpp-table-reduction-inits
+                          (target-expr (gethash r graph)))
+                         )))))
+               ;; posts for all reductions
+               (posts
+                (loop
+                   for r in reductions
+                   appending
+                     (replace-uniqsyms
+                      r
+                      (let ((expr (target-expr (gethash r graph))))
+                        (cond
+                          ((cpp-tab? expr)
+                           (let ((file-tree (gethash r
+                                                     cpp-tab->file-tree-gsyms)))
+                             (destructuring-bind (file tree)
+                                 file-tree
+                               `((method ,tree write)
+                                 (method ,file root-close)))))
+                          ((cpp-dotab? expr)
+                           (cpp-table-reduction-posts expr))
+                          (t nil))))))
+               ;; list of result forms making use of any gsymed values:
+               (result-list
+                (progn
+                  `(list
                     ,@(loop
                          for r in pass
-                         collecting `(format t "~a~%" ',r))))))
-             (print-pass-targets-var
-              (gsym 'table-pass))
-             (print-progress-inits
-              (when *print-progress*
-                `((,row-var 0)
-                  (,nrows-var (table-nrows ,(if (and (listp src)
-                                                     (eq (first src) 'res))
-                                                src
-                                                `(res ,src))))
-                  ;; message specifying what the pass will accomplish
-                  (,print-pass-targets-var
-                   ,@print-pass-targets))))
-             (print-progress
-              (when *print-progress*
-                `((progn
-                    (when (zerop (the fixnum
-                                      (mod ,row-var
-                                           (the fixnum ,*print-progress*))))
-                      (format t "Event ~a, ~$% complete~%"
-                              ,row-var
-                              (* 1f2
-                                 (/ (float ,row-var)
-                                    (float ,nrows-var)))))
-                    (incf ,row-var))))))
-        `(progn
-           (table-pass ,(if (and (listp src)
-                                 (eq (first src) 'res))
-                            src
-                            `(res ,src))
-               (,@inits
-                ,@print-progress-inits)
-               ,result-list
-               ,lfields
-             ,@print-progress
-             ,body))))))
+                         collect
+                           (gethash r reduction->return)))))
+               ;; Map from cpp-tab to ofields present in expression
+
+               ;; map from table to lfields for table:
+               (cpp-tab->lfields
+                (gethash (project) *proj->cpp-tab->lfields*))
+               ;; lfields expanded:
+               (lfields
+                ;; lfields from source
+                (when cpp-tab->lfields
+                  (gethash src cpp-tab->lfields)))
+               ;; resulting pass body:
+               (body
+                (labels
+                    ((rec (node)
+                       (let* ((c (node-id node))
+                              (expr
+                               ;; replace uniq first
+                               (replace-uniqsyms c (target-expr (gethash c graph))))
+                              (lfields
+                               (let ((cpp-tab->lfields
+                                      (gethash (project) *proj->cpp-tab->lfields*)))
+                                 (when cpp-tab->lfields
+                                   (gethash c cpp-tab->lfields))))
+                              (children-exprs
+                               (when (node-children node)
+                                 (mapcar #'rec
+                                         (node-children node))))
+                              (sub-bodies
+                               (loop
+                                  for fill in (if (equal c src)
+                                                  (list nil)
+                                                  (find-push-fields expr))
+                                  collect
+                                  ;; replace (field x) with x for x for every
+                                  ;; x in the push-field-bindings
+                                    `(progn
+                                       ,@(sublis
+                                          (append
+                                           ;; fields
+                                           (loop
+                                              for field in (gethash c cpp-tab->fields)
+                                              collect
+                                                (cons
+                                                 `(field ,field)
+                                                 (gethash field
+                                                          (gethash c
+                                                                   cpp-tab->field->gsym))))
+                                           ;; ofields
+                                           (loop
+                                              for field in (gethash c cpp-tab->fields)
+                                              collect
+                                                (cons
+                                                 `(ofield ,field)
+                                                 (gethash field
+                                                          (gethash c
+                                                                   cpp-tab->field->gsym)))))
+                                          (append
+                                           (mapcar
+                                            (lambda (id)
+                                              `(progn
+                                                 ,@(let*
+                                                    ((rawexpr
+                                                      (target-expr
+                                                       (gethash id graph)))
+                                                     (expr
+                                                      (replace-uniqsyms
+                                                       id rawexpr)))
+                                                    (if
+                                                     (cpp-tab? expr)
+                                                     (let* ((file-tree-gsyms
+                                                             (gethash id
+                                                                      cpp-tab->file-tree-gsyms))
+                                                            (file (first file-tree-gsyms))
+                                                            (tree (second file-tree-gsyms)))
+                                                       `((method ,tree fill)))
+                                                     (cpp-table-reduction-body expr)))))
+                                            (node-content node))
+                                           children-exprs)
+                                          :test #'equal)))))
+                         (if (and (not (equal c src))
+                                  (cpp-table-reduction? expr))
+                             (let ((result
+                                    (replace-push-fields
+                                     `(progn
+                                        ,@lfields
+                                        ,@(let ((bod
+                                                 (cpp-table-reduction-body expr)))
+                                               (if (cpp-tab? expr)
+                                                   (sublis
+                                                    (loop
+                                                       for field in (gethash c cpp-tab->fields)
+                                                       collect
+                                                         (cons
+                                                          `(ofield ,field)
+                                                          (gethash field
+                                                                   (gethash c
+                                                                            cpp-tab->field->gsym))))
+                                                    bod
+                                                    :test #'equal)
+                                                   bod)))
+                                     sub-bodies)))
+                               result)
+                             (first sub-bodies)))))
+                  (rec context-tree)))
+               (row-var (gsym))
+               (nrows-var (gsym))
+               (print-pass-targets
+                (when *print-progress*
+                  `((<< cout
+                        (str "Pass over ")
+                        (str ,(mkstr src))
+                        (str " to compute:")
+                        endl)
+                    ,@(loop
+                         for r in pass
+                         collecting
+                           `(<< cout (str ,(mkstr r)) endl)))))
+               (print-progress-inits
+                (when *cpp-print-progress*
+                  `((var long ,row-var 0)
+                    (var long ,nrows-var
+                         (eval (root-table-nrows
+                                ,(if (and (listp src)
+                                          (eq (first src) 'res))
+                                     src
+                                     `(res ,src)))))
+                    ;; message specifying what the pass will accomplish
+                    ,@print-pass-targets)))
+               (print-progress
+                (when *cpp-print-progress*
+                  `((progn
+                      (when (= (mod ,row-var
+                                    (eval ,*cpp-print-progress*))
+                               0)
+                        (<< cout (str "Event ") ,row-var
+                            (str ", ")
+                            (* 1d2
+                               (/ (typecast float ,row-var)
+                                  (typecast float ,nrows-var)))
+                            (str "% complete")
+                            endl))
+                      (incf ,row-var))))))
+          `(progn
+             ,@(let ((src-target
+                      (if (and (listp src)
+                               (eq (first src) 'res))
+                          src
+                          `(res ,src))))
+                    `((cpp-table-pass (root-table-paths
+                                       ,src-target)
+                                      (root-table-name
+                                       ,src-target)
+                                      ;; only for testing
+                                      "/home/ghollisjr/test/cpptrans-exe"
+                                      (cpp-tab-fields-types->src-fields-types
+                                       (root-table-fields-types
+                                        ,src-target))
+                                      '(,@inits
+                                        ,@print-progress-inits)
+                                      ',posts
+                                      ',lfields
+                                      '(progn
+                                        ,@print-progress
+                                        ,body))
+                      ,result-list))))))))
 
 (defun set-pass-result-targets! (result-graph id pass)
   "Sets result-graph targets from pass so that they make use of the

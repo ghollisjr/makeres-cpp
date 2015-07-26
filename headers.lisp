@@ -21,6 +21,8 @@
 
 (in-package :makeres-cpp)
 
+(declaim (optimize (debug 3)))
+
 (defparameter *headers*
   (make-hash-table :test 'equal))
 
@@ -142,9 +144,16 @@ compiler."
                                            :test #'equal
                                            :singleton-pairs t))))))
                    ((atom f)
-                    (when (gethash f cpp->header)
-                      (setf result
-                            (list (gethash f cpp->header))))))
+                    (let ((f
+                           (if (and (symbolp f)
+                                    (not (equal
+                                          (package-name (symbol-package f))
+                                          "KEYWORD")))
+                               (intern (string f) :makeres-cpp)
+                               f)))
+                      (when (gethash f cpp->header)
+                        (setf result
+                              (list (gethash f cpp->header)))))))
                  result)))
       (rec form))))
 
@@ -169,9 +178,16 @@ compiler."
                                            :test #'equal
                                            :singleton-pairs t))))))
                    ((atom f)
-                    (when (gethash f cpp->cheader)
-                      (setf result
-                            (list (gethash f cpp->cheader))))))
+                    (let ((f
+                           (if (and (symbolp f)
+                                    (not (equal
+                                          (package-name (symbol-package f))
+                                          "KEYWORD")))
+                               (intern (string f) :makeres-cpp)
+                               f)))
+                      (when (gethash f cpp->cheader)
+                        (setf result
+                              (list (gethash f cpp->cheader)))))))
                  result)))
       (rec form))))
 

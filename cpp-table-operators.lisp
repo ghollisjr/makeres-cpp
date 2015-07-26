@@ -88,6 +88,7 @@ result table)."
   (make-root-table :paths paths
                    :fields-types
                    (read-fields-types paths name)
+                   :nrows (read-nrows paths name)
                    :name name))
 
 ;;;; NOTES
