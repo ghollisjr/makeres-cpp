@@ -215,7 +215,6 @@
                                   buffer_index
                                   (H5Tget-member-offset binspec_datatype
                                                         4)))))
-
               (incf row)))
 
     ;;; Create histogram result
@@ -850,35 +849,7 @@
                      (+ i n_count_vars))
                   +H5T-NATIVE-DOUBLE+))
 
-  ;; Create dataset
-  (setf data_dataspace
-        (h5screate-simple 1
-                          data_dataset_dims
-                          data_dataset_maxdims))
-  (setf cparms
-        (h5pcreate +H5P-DATASET-CREATE+))
-  (var (pointer hsize-t) data_chunk_dims
-       (new hsize-t))
-  (setf (value data_chunk_dims)
-        chunk_size)
-  (h5pset-chunk cparms 1 data_chunk_dims)
-  (setf data_dataset
-        (h5dcreate1 outfile
-                    (str "/histogram/data")
-                    data_datatype
-                    data_dataspace
-                    cparms))
-  (h5sclose data_dataspace)
-
-  ;; Setup buffer
-  (setf buffer
-        (new[] char (* data_row_size
-                       chunk_size)))
-
-  (var (pointer double) count
-       (new[] double n_count_vars))
-  (var (pointer double) xs
-       (new[] double ndims))
+  
 
   ;; Amount of data in histogram
   (var long npoints)
@@ -911,8 +882,42 @@
      (setf npoints
            (pmethod h axis.nbins))))
 
+  ;; Create dataset
+  (setf chunk_size npoints)
+  (setf data_dataspace
+        (h5screate-simple 1
+                          data_dataset_dims
+                          data_dataset_maxdims))
+  (setf cparms
+        (h5pcreate +H5P-DATASET-CREATE+))
+  (var (pointer hsize-t) data_chunk_dims
+       (new hsize-t))
+  (setf (value data_chunk_dims)
+        chunk_size)
+  (h5pset-chunk cparms 1 data_chunk_dims)
+  (setf data_dataset
+        (h5dcreate1 outfile
+                    (str "/histogram/data")
+                    data_datatype
+                    data_dataspace
+                    cparms))
+  (h5sclose data_dataspace)
+
+  ;; Setup buffer
+  (setf buffer
+        (new[] char (* data_row_size
+                       chunk_size)))
+
+  (var (pointer double) count
+       (new[] double n_count_vars))
+  (var (pointer double) xs
+       (new[] double ndims))
+
   ;; Row index
   (setf row 0)
+
+  ;; Chunk index
+  (var int chunk_index -1)
 
   (for (var int i 0) (< i npoints) (incf i)
        ;; Set count and xs for each type of histogram
@@ -924,16 +929,16 @@
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
-                         i))
+                         (+ i 1)))
           (if (= n_count_vars 2)
               (setf (aref count 1)
                     (pmethod h
                              bin-error
-                             i)))
+                             (+ i 1))))
           (setf (aref xs 0)
                 (pmethod h
                          get-bin-center
-                         i)))
+                         (+ i 1))))
          (;; TH2D
           (= ndims 2)
           (var (pointer TH2D) h
@@ -943,17 +948,18 @@
           (var int z_index)
           (pmethod h
                    get-bin-xyz
-                   i x_index y_index z_index)
+                   (+ i 1)
+                   x_index y_index z_index)
 
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
-                         i))
+                         (+ i 1)))
           (if (= n_count_vars 2)
               (setf (aref count 1)
                     (pmethod h
                              bin-error
-                             i)))
+                             (+ i 1))))
           (var (pointer TAxis) xaxis
                (pmethod h x-axis))
           (var (pointer TAxis) yaxis
@@ -976,16 +982,17 @@
           (var int z_index)
           (pmethod h
                    get-bin-xyz
-                   i x_index y_index z_index)
+                   (+ i 1)
+                   x_index y_index z_index)
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
-                         i))
+                         (+ i 1)))
           (if (= n_count_vars 2)
               (setf (aref count 1)
                     (pmethod h
                              bin-error
-                             i)))
+                             (+ i 1))))
           (var (pointer TAxis) xaxis
                (pmethod h x-axis))
           (var (pointer TAxis) yaxis
@@ -1012,26 +1019,35 @@
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
-                         i))
+                         (+ i 1)))
           (if (= n_count_vars 2)
               (setf (aref count 1)
                     (sqrt
                      (pmethod h
                               get-bin-error2
-                              i))))
+                              (+ i 1)))))
           (var (pointer int) indices
                (new[] int ndims))
           (pmethod h get-bin-content
-                   i indices)
+                   (+ i 1)
+                   indices)
           (for (var int axis_index 0) (< axis_index ndims) (incf axis_index)
                (var (pointer TAxis) axis
                     (pmethod h get-axis axis_index))
                (setf (aref xs axis_index)
                      (pmethod axis get-bin-center
                               (aref indices axis_index))))))
+       ;; debug
+       ;; (<< cout (aref count 0)
+       ;;     (str " ")
+       ;;     (aref (aref xs 0))
+       ;;     endl)
+       ;; end debug
        ;; Fill buffer whenever count or error are not zero
        (var long buf_index
-            (mod row chunk_size))
+            (* (mod row chunk_size)
+               (+ n_count_vars ndims)))
+
        (var (pointer double) buf
             (typecast (pointer double) buffer))
        (var bool fill_p false)
@@ -1052,11 +1068,24 @@
              (for (var int j 0) (< j ndims) (incf j)
                   (setf (aref buf (+ buf_index j n_count_vars))
                         (aref xs j)))
+             ;; ;; debug
+             ;; (<< cout
+             ;;     buf_index (str " ")
+             ;;     (aref buf buf_index) (str " ")
+             ;;     (aref buf (+ buf_index 1)) (str " ")
+             ;;     (aref buf (+ buf_index 2)) (str " ")
+             ;;     endl)
+             ;; ;; end debug
+             ;; debug
+             ;; (<< cout row endl)
+             ;; end debug
+             
              (incf row)))
        ;; When buffer full, write chunk to dataset
        (if (and (not (= row 0))
                 (= 0 (mod row chunk_size)))
            (progn
+             (incf chunk_index)
              (setf (value data_dataset_dims)
                    (+ (value data_dataset_dims)
                       chunk_size))
@@ -1072,7 +1101,8 @@
              (setf memspace
                    (h5screate-simple 1 memspace_dims memspace_maxdims))
 
-             (setf (value start) 0)
+             (setf (value start) (* chunk_size
+                                    chunk_index))
              (setf (value stride) 1)
              (setf (value cnt) 1)
              (setf (value blck) chunk_size)
@@ -1089,8 +1119,10 @@
              (h5sclose memspace)
              (h5sclose data_dataspace))))
   ;; Final write if events don't match buffer size
-  (if (not (= 0 (mod row chunk_size)))
+  (if (not (= 0
+              (mod row chunk_size)))
       (progn
+        (incf chunk_index)
         (var long final_chunk_size
              (mod row chunk_size))
         (setf (value data_dataset_dims)
@@ -1108,7 +1140,17 @@
         (setf memspace
               (h5screate-simple 1 memspace_dims memspace_maxdims))
 
-        (setf (value start) 0)
+        ;; ;; debug
+        ;; (<< cout chunk_index endl)
+        ;; ;; end debug
+        
+        (setf (value start) (* chunk_size
+                               chunk_index))
+
+        ;; ;; debug
+        ;; (<< cout (value start) endl)
+        ;; ;; end debug
+        
         (setf (value stride) 1)
         (setf (value cnt) 1)
         (setf (value blck) final_chunk_size)
@@ -1125,6 +1167,4 @@
         (h5sclose memspace)
         (h5sclose data_dataspace)))
   ;; Cleanup
-  (h5fclose outfile)
-
-  )
+  (h5fclose outfile))

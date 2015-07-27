@@ -27,7 +27,7 @@
   (defpackage test
     (:use :cl
           :makeres-cpp))
-  
+
   (cl-ana.package-utils:use-package-group :cl-ana :test))
 
 (in-package :test)
@@ -67,8 +67,13 @@
                         2
                         (str (eval (work-path "src-p-b.h5")))
                         (uniq names)))
-      (load-object 'sparse-histogram
-                   (eval (work-path "src-p-b.h5")))
+      (progn
+        ;; (external-program:run "cp"
+        ;;                       (list (work-path "src-p-b.h5")
+        ;;                             "/home/ghollisjr/test.h5"))
+        ;; (load-object 'sparse-histogram "/home/ghollisjr/test.h5")
+        (load-object 'sparse-histogram
+                     (work-path "src-p-b.h5")))
     (for (var int i 0) (< i (field |gpart|)) (incf i)
          ;; (<< cout
          ;;     (aref (field |p|) i)
@@ -135,10 +140,33 @@
                         (str (eval (work-path "filtered-p-b.h5")))
                         (uniq names)))
       (load-object 'sparse-histogram
-                   (eval (work-path "filtered-p-b.h5")))
+                   (work-path "filtered-p-b.h5"))
     (for (var int i 0) (< i (field |gpart|)) (incf i)
          (method (uniq hist) fill
                  (aref (field |p|) i)
+                 (aref (field |b|) i)))))
+
+(defres (filtered b)
+  (cpp-dotab (res filtered)
+      ((varcons TH1D (uniq hist)
+                (str (uniq hist)) (str (uniq hist))
+                100 0d0 1.2d0)
+       (vararray string (uniq names) (1)
+                 (str "b")))
+      ((varcons TFile (uniq file)
+                (str (eval (work-path "filtered-b.root")))
+                (str "RECREATE"))
+       (method (uniq file) cd)
+       (method (uniq hist) write)
+       (method (uniq file) root-close)
+       (write_histogram (address (uniq hist))
+                        1
+                        (str (eval (work-path "filtered-b.h5")))
+                        (uniq names)))
+      (load-object 'sparse-histogram
+                   (work-path "filtered-b.h5"))
+    (for (var int i 0) (< i (field |gpart|)) (incf i)
+         (method (uniq hist) fill
                  (aref (field |b|) i)))))
 
 (defres (filtered subset)
@@ -148,27 +176,27 @@
       (push-fields))))
 
 (defres (filtered subset p b)
-    (cpp-dotab (res (filtered subset))
-               ((varcons TH2D (uniq hist)
-                         (str (uniq hist)) (str (uniq hist))
-                         100 0d0 3d0
-                         100 0d0 1.2d0)
-                (vararray string (uniq names) (2)
-                          (str "p")
-                          (str "b")))
-        ((varcons TFile (uniq file)
-                  (str (eval (work-path "filtered-subset-p-b.root")))
-                  (str "RECREATE"))
-         (method (uniq file) cd)
-         (method (uniq hist) write)
-         (method (uniq file) root-close)
-         (write_histogram (address (uniq hist))
-                                 2
-                                 (str (eval (work-path "filtered-subset-p-b.h5")))
-                                 (uniq names)))
-               (load-object 'sparse-histogram
-                            (eval (work-path "filtered-subset-p-b.h5")))
-               (for (var int i 0) (< i (field |gpart|)) (incf i)
-                    (method (uniq hist) fill
-                            (aref (field |p|) i)
-                            (aref (field |b|) i)))))
+  (cpp-dotab (res (filtered subset))
+      ((varcons TH2D (uniq hist)
+                (str (uniq hist)) (str (uniq hist))
+                100 0d0 3d0
+                100 0d0 1.2d0)
+       (vararray string (uniq names) (2)
+                 (str "p")
+                 (str "b")))
+      ((varcons TFile (uniq file)
+                (str (eval (work-path "filtered-subset-p-b.root")))
+                (str "RECREATE"))
+       (method (uniq file) cd)
+       (method (uniq hist) write)
+       (method (uniq file) root-close)
+       (write_histogram (address (uniq hist))
+                        2
+                        (str (eval (work-path "filtered-subset-p-b.h5")))
+                        (uniq names)))
+      (load-object 'sparse-histogram
+                   (work-path "filtered-subset-p-b.h5"))
+    (for (var int i 0) (< i (field |gpart|)) (incf i)
+         (method (uniq hist) fill
+                 (aref (field |p|) i)
+                 (aref (field |b|) i)))))

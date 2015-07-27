@@ -250,6 +250,10 @@
                            -5
                            5)
                   (method hist Fill
+                          (typecast double -1)
+                          (typecast double -1)
+                          (typecast double -1))
+                  (method hist Fill
                           (typecast double 0)
                           (typecast double 0)
                           (typecast double 0))

@@ -282,10 +282,6 @@ non-ignored sources."
                         (adjoin src
                                 srcs
                                 :test #'equal)))))))
-    (print 'srcs)
-    (print srcs)
-    (print 'reds)
-    (print reds)
     (set-difference srcs reds :test #'equal)))
 
 (defun removed-source-dep< (target-table)
@@ -837,7 +833,6 @@ from pass up to src."
                                        ,src-target)
                                       (root-table-name
                                        ,src-target)
-                                      ;; only for testing
                                       (cpp-exe-path)
                                       (cpp-tab-fields-types->src-fields-types
                                        (root-table-fields-types
@@ -973,8 +968,6 @@ true when given the key and value from ht."
                   (set-difference
                    (ultimate-source-tables graph processed-srcs)
                    processed-srcs)))
-             (print srcs)
-             (print processed-srcs)
              (when srcs
                (dolist (src srcs)
                  (push src processed-srcs)
