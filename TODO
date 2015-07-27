@@ -1,6 +1,6 @@
-+ test.lisp shows that
+- test.lisp shows that
 
-  +1. Serialization of histograms is not working properly.  Histograms
+  -1. Serialization of histograms is not working properly.  Histograms
       can be written to ROOT files but calling write_histogram does
       not result in correct histogram results.
 

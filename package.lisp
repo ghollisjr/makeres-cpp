@@ -61,6 +61,9 @@
    :ensure-cpp-table-binding-ops
    :ensure-cpp-table-op-expanders
 
+   ;; Utilities
+   :root2hdf
+
    ;; C++ Functions
    :read_histogram
    :write_histogram

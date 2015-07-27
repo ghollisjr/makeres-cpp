@@ -43,6 +43,9 @@
 
                ;; ROOT table type:
                (:file "root-table")
+
+               ;; Conversion utilties
+               (:file "convert")
                
                ;; ;; C++ table operators
                (:file "cpp-table-operators")
