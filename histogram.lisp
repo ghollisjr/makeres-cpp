@@ -21,6 +21,129 @@
 
 (in-package :makeres-cpp)
 
+;; C++ histogram definition operator
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun replace-hins (body)
+    (cond
+      ((null body)
+       nil)
+      ((listp body)
+       (if (eq (first body)
+               'hins)
+           `(method (uniq hist) fill ,@(rest body))
+           (mapcar #'replace-hins body)))
+      ((atom body)
+       body))))
+
+(defmacro defcpphist (id src bin-specs &body body)
+  "Defines a do-cpptab target resulting in a C++ histogram.  Provides
+the following operators for use in the body:
+
+hins supplies any operators given to it to the Fill method applied to
+the histogram object being filled.
+
+(uniq hist) references the result histogram."
+  (let* ((ndims (length bin-specs))
+         (tmppath
+          (cut-newline
+           (sh mktemp "-p" (namestring *cpp-work-path*)))))
+    `(defres ,id
+       (cpp-dotab ,src
+           ,(append
+             (cond
+               ((= ndims 1)
+                `((varcons TH1D (uniq hist)
+                           (str (uniq hist))
+                           (str (uniq hist))
+                           ,(getf (first bin-specs)
+                                  :nbins)
+                           ,(getf (first bin-specs)
+                                  :low)
+                           ,(getf (first bin-specs)
+                                  :high))))
+               ((= ndims 2)
+                `((varcons TH2D (uniq hist)
+                           (str (uniq hist))
+                           (str (uniq hist))
+                           ,(getf (first bin-specs)
+                                  :nbins)
+                           ,(getf (first bin-specs)
+                                  :low)
+                           ,(getf (first bin-specs)
+                                  :high)
+                           ,(getf (second bin-specs)
+                                  :nbins)
+                           ,(getf (second bin-specs)
+                                  :low)
+                           ,(getf (second bin-specs)
+                                  :high))))
+               ((= ndims 3)
+                `((varcons TH3D (uniq hist)
+                           (str (uniq hist))
+                           (str (uniq hist))
+                           ,(getf (first bin-specs)
+                                  :nbins)
+                           ,(getf (first bin-specs)
+                                  :low)
+                           ,(getf (first bin-specs)
+                                  :high)
+                           ,(getf (second bin-specs)
+                                  :nbins)
+                           ,(getf (second bin-specs)
+                                  :low)
+                           ,(getf (second bin-specs)
+                                  :high)
+                           ,(getf (third bin-specs)
+                                  :nbins)
+                           ,(getf (third bin-specs)
+                                  :low)
+                           ,(getf (third bin-specs)
+                                  :high))))
+               (t
+                `((vararray int (uniq nbins) (,ndims)
+                            ,@(loop
+                                 for bs in bin-specs
+                                 collecting
+                                   `(str ,(getf bs :nbins))))
+                  (vararray double (uniq low) (,ndims)
+                            ,@(loop
+                                 for bs in bin-specs
+                                 collecting
+                                   `(str ,(getf bs :low))))
+                  (vararray  (uniq high) (,ndims)
+                             ,@(loop
+                                  for bs in bin-specs
+                                  collecting
+                                    `(str ,(getf bs :high))))
+                  (varcons THnSparseD (uniq hist)
+                           (str (uniq hist))
+                           (str (uniq hist))
+                           ,ndims
+                           (uniq nbins)
+                           (uniq low)
+                           (uniq high)
+                           ,(getf (first bin-specs)
+                                  :nbins)
+                           ,(getf (first bin-specs)
+                                  :low)
+                           ,(getf (first bin-specs)
+                                  :high)))))
+             `((vararray string (uniq names) (,ndims)
+                         ,@(loop
+                              for bs in bin-specs
+                              collecting `(str ,(getf bs :name))))))
+           ((write_histogram (address (uniq hist))
+                             ,ndims
+                             (str ,tmppath)
+                             (uniq names)))
+           (let ((result
+                  (load-object 'sparse-histogram
+                               ,tmppath)))
+             (delete-file ,tmppath)
+             result)
+         ,@(replace-hins body)))))
+
 (defcppfun (pointer void) read_histogram
     ((var string filename))
   (let ((hid-t infile
@@ -481,7 +604,18 @@
                        (pmethod h
                                 set-bin-error
                                 bin_index
-                                (aref count 1))))))))
+                                (aref count 1)))))
+                ;; THnSparse
+                (t
+                 (var (pointer TH3D) h
+                      (typecast (pointer TH3D) result))
+                 (pmethod h xs (value count))
+                 (pmethod h
+                          set-bin-error2
+                          (pmethod h
+                                   get-bin
+                                   xs)
+                          (aref count 1))))))
     (return result)))
 
 (defcppfun void write_histogram
@@ -849,7 +983,7 @@
                      (+ i n_count_vars))
                   +H5T-NATIVE-DOUBLE+))
 
-  
+
 
   ;; Amount of data in histogram
   (var long npoints)
@@ -1079,7 +1213,7 @@
              ;; debug
              ;; (<< cout row endl)
              ;; end debug
-             
+
              (incf row)))
        ;; When buffer full, write chunk to dataset
        (if (and (not (= row 0))
@@ -1143,14 +1277,14 @@
         ;; ;; debug
         ;; (<< cout chunk_index endl)
         ;; ;; end debug
-        
+
         (setf (value start) (* chunk_size
                                chunk_index))
 
         ;; ;; debug
         ;; (<< cout (value start) endl)
         ;; ;; end debug
-        
+
         (setf (value stride) 1)
         (setf (value cnt) 1)
         (setf (value blck) final_chunk_size)

@@ -21,6 +21,12 @@
 
 (in-package :makeres-cpp)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defvar *cpp-work-path*))
+
+(defmacro set-cpp-work-path (path)
+  `(setf *cpp-work-path* ,path))
+
 (defparameter *proj->bin-path*
   (make-hash-table :test 'equal)
   "Map from project to binary directory path for project")

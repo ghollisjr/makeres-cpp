@@ -30,11 +30,6 @@ print a progress update message.  Note that this should only be used
 for tables which know their size (so CSV tables don't work with
 this).")
 
-(defvar *cpp-work-path*)
-
-(defun set-cpp-work-path (path)
-  (setf *cpp-work-path* path))
-
 (defun cpp-exe-path ()
   (merge-pathnames "exe"
                    (make-pathname :directory *cpp-work-path*)))

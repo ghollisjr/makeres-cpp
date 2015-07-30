@@ -54,9 +54,11 @@
    ;; Special reduction operators
    :ofield
    :uniq
-
+   :defcpphist
+   
    ;; Project settings:
    :*cpp-print-progress*
+   :*cpp-work-path*
    :set-cpp-work-path
    :ensure-cpp-table-binding-ops
    :ensure-cpp-table-op-expanders

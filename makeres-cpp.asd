@@ -38,6 +38,9 @@
                ;; C++ function definition
                (:file "function")
 
+               ;; Shell utilities
+               (:file "shell")
+
                ;; Read/Write ROOT histogram via HDF5 cl-ana formatting
                (:file "histogram")
 

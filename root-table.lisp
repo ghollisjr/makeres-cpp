@@ -63,84 +63,6 @@
      ("Bool_t" . "O"))
    'equal))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun to-str (x)
-    "Provides a shell-like treatment of symbols.  Symbols starting
-with $ are evaluated, others are returned as downcased strings."
-    (cond
-      ((symbolp x)
-       (let ((package (symbol-package x))
-             (str (string x)))
-         (if (char= (elt str 0)
-                    #\$)
-             (intern (subseq str 1)
-                     package)
-             (string-downcase str))))
-      (t x))))
-
-;; Shell utilities:
-(defmacro sh (command &rest args)
-  (let ((command
-         (to-str command))
-        (s (gensym)))
-    `(with-output-to-string (,s)
-       (run ,command (list ,@args)
-            :output ,s))))
-
-(defun cd (dir)
-  (sb-posix:chdir dir))
-
-(defun pwd ()
-  (sb-posix:getcwd))
-
-(defun cut-newline (string)
-  (let ((length (length string)))
-    (if (not (zerop length))
-        (if (char= #\Newline (elt string (1- length)))
-            (subseq string 0 (1- length))
-            string)
-        "")))
-
-(defmacro pipe (&rest commands)
-  "Each command should be a list starting with the command string or
-symbol to be lowercased followed by the arguments to that command
-which will be evaluated.  The output of the previous command is piped
-into the input of the next command."
-  (let* ((commands
-          (mapcar (lambda (command)
-                    (cons (to-str (first command))
-                          (rest command)))
-                  commands))
-         (functions
-          (mapcar (lambda (command)
-                    (alexandria:with-gensyms (stream s)
-                      `(lambda (,stream)
-                         (with-output-to-string (,s)
-                           (run ,(first command) (list ,@(rest command))
-                                :input ,stream
-                                :output ,s)))))
-                  commands)))
-    (alexandria:with-gensyms (fns left right stream)
-      `(let ((,fns
-              (list ,@functions)))
-         (reduce (lambda (,left ,right)
-                   (with-input-from-string (,stream ,left)
-                     (funcall ,right ,stream)))
-                 ,fns
-                 :initial-value "")))))
-
-(defun lines (x)
-  "Convert string into list of lines"
-  (remove ""
-          (split-sequence:split-sequence
-           #\Newline
-           (cut-newline x))
-          :test #'string=))
-
-(defun unlines (x)
-  "Convert list of lines into string"
-  (apply #'string-append (intersperse (format nil "~%") x)))
-
 (defun read-fields-types (paths name)
   "Reads the field names and types of a stored TTree. Output is a list
   with elements of the following form:
@@ -285,8 +207,11 @@ into the input of the next command."
 
 (defun read-nrows (paths name)
   "Reads number of rows from TTree(s)"
-  (let ((tmppath (cut-newline (sh mktemp))))
-    (delete-file tmppath)
+  (let* ((tmpdir (mktempdir))
+         (tmppath (merge-pathnames
+                   "exe"
+                   (make-pathname :directory
+                                  (list :absolute tmpdir)))))
     (let ((result
            (read-from-string
             (with-output-to-string (s)
@@ -302,8 +227,7 @@ into the input of the next command."
                                          (str ,p)))
                          (<< cout (method chain entries) endl)))
                       :output s)))))
-      (delete-file tmppath)
-      (delete-file (mkstr tmppath ".cc"))
+      (sb-ext:delete-directory tmpdir :recursive t)
       result)))
 
 (defstruct root-table

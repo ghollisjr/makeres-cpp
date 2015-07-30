@@ -43,6 +43,8 @@
 ;; bin-center only meaningful for 1-D
 (defcpp get-bin-center ()
   "GetBinCenter")
+(defcpp get-bin ()
+  "GetBin")
 (defcpp get-bin-xyz ()
   "GetBinXYZ")
 (defcpp get-bin-content ()
@@ -55,6 +57,8 @@
   "GetBinError2")
 (defcpp set-bin-error ()
   "SetBinError")
+(defcpp set-bin-error2  ()
+  "SetBinError2")
 (defcpp bin ()
   "GetBin")
 (defcpp find-bin ()

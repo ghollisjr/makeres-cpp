@@ -37,6 +37,8 @@
   (list #'macrotrans #'branchtrans #'tabletrans #'cpptrans #'progresstrans)
   (fixed-cache 5))
 
+(ensure-table-binding-ops)
+(ensure-table-op-expanders)
 (ensure-cpp-table-binding-ops)
 (ensure-cpp-table-op-expanders)
 
@@ -48,41 +50,19 @@
   (cpp-srctab (list "/home/ghollisjr/test/a1ntp_36516_pass1.a00.rzn.root.skim")
               "h10"))
 
-(defres (src p b)
-  (cpp-dotab (res src)
-      ((varcons TH2D (uniq hist)
-                (str (uniq hist)) (str (uniq hist))
-                100 0d0 3d0
-                100 0d0 1.2d0)
-       (vararray string (uniq names) (2)
-                 (str "p")
-                 (str "b")))
-      ((varcons TFile (uniq file)
-                (str (eval (work-path "src-p-b.root")))
-                (str "RECREATE"))
-       (method (uniq file) cd)
-       (method (uniq hist) write)
-       (method (uniq file) root-close)
-       (write_histogram (address (uniq hist))
-                        2
-                        (str (eval (work-path "src-p-b.h5")))
-                        (uniq names)))
-      (progn
-        ;; (external-program:run "cp"
-        ;;                       (list (work-path "src-p-b.h5")
-        ;;                             "/home/ghollisjr/test.h5"))
-        ;; (load-object 'sparse-histogram "/home/ghollisjr/test.h5")
-        (load-object 'sparse-histogram
-                     (work-path "src-p-b.h5")))
-    (for (var int i 0) (< i (field |gpart|)) (incf i)
-         ;; (<< cout
-         ;;     (aref (field |p|) i)
-         ;;     (str " ")
-         ;;     (aref (field |b|) i)
-         ;;     endl)
-         (method (uniq hist) fill
-                 (aref (field |p|) i)
-                 (aref (field |b|) i)))))
+(defcpphist (src p b)
+    (res src)
+    ((:name "p"
+            :nbins 100
+            :low 0d0
+            :high 3d0)
+     (:name "b"
+            :nbins 100
+            :low 0d0
+            :high 1.2d0))
+  (for (var int i 0) (< i (field |gpart|)) (incf i)
+       (hins (aref (field |p|) i)
+             (aref (field |b|) i))))
 
 (defres filtered
   (cpp-tab (res src)
@@ -120,54 +100,28 @@
                          i)))
         (push-fields)))))
 
-(defres (filtered p b)
-  (cpp-dotab (res filtered)
-      ((varcons TH2D (uniq hist)
-                (str (uniq hist)) (str (uniq hist))
-                100 0d0 3d0
-                100 0d0 1.2d0)
-       (vararray string (uniq names) (2)
-                 (str "p")
-                 (str "b")))
-      ((varcons TFile (uniq file)
-                (str (eval (work-path "filtered-p-b.root")))
-                (str "RECREATE"))
-       (method (uniq file) cd)
-       (method (uniq hist) write)
-       (method (uniq file) root-close)
-       (write_histogram (address (uniq hist))
-                        2
-                        (str (eval (work-path "filtered-p-b.h5")))
-                        (uniq names)))
-      (load-object 'sparse-histogram
-                   (work-path "filtered-p-b.h5"))
-    (for (var int i 0) (< i (field |gpart|)) (incf i)
-         (method (uniq hist) fill
-                 (aref (field |p|) i)
-                 (aref (field |b|) i)))))
+(defcpphist (filtered p b)
+    (res filtered)
+    ((:name "p"
+            :nbins 100
+            :low 0d0
+            :high 3d0)
+     (:name "b"
+            :nbins 100
+            :low 0d0
+            :high 1.2d0))
+  (for (var int i 0) (< i (field |gpart|)) (incf i)
+       (hins (aref (field |p|) i)
+             (aref (field |b|) i))))
 
-(defres (filtered b)
-  (cpp-dotab (res filtered)
-      ((varcons TH1D (uniq hist)
-                (str (uniq hist)) (str (uniq hist))
-                100 0d0 1.2d0)
-       (vararray string (uniq names) (1)
-                 (str "b")))
-      ((varcons TFile (uniq file)
-                (str (eval (work-path "filtered-b.root")))
-                (str "RECREATE"))
-       (method (uniq file) cd)
-       (method (uniq hist) write)
-       (method (uniq file) root-close)
-       (write_histogram (address (uniq hist))
-                        1
-                        (str (eval (work-path "filtered-b.h5")))
-                        (uniq names)))
-      (load-object 'sparse-histogram
-                   (work-path "filtered-b.h5"))
-    (for (var int i 0) (< i (field |gpart|)) (incf i)
-         (method (uniq hist) fill
-                 (aref (field |b|) i)))))
+(defcpphist (filtered b)
+    (res filtered)
+    ((:name "b"
+            :nbins 100
+            :low 0d0
+            :high 1.2d0))
+  (for (var int i 0) (< i (field |gpart|)) (incf i)
+       (hins (aref (field |b|) i))))
 
 (defres (filtered subset)
   (cpp-ltab (res filtered) ()
@@ -175,28 +129,32 @@
              0.4d0)
       (push-fields))))
 
-(defres (filtered subset p b)
-  (cpp-dotab (res (filtered subset))
-      ((varcons TH2D (uniq hist)
-                (str (uniq hist)) (str (uniq hist))
-                100 0d0 3d0
-                100 0d0 1.2d0)
-       (vararray string (uniq names) (2)
-                 (str "p")
-                 (str "b")))
-      ((varcons TFile (uniq file)
-                (str (eval (work-path "filtered-subset-p-b.root")))
-                (str "RECREATE"))
-       (method (uniq file) cd)
-       (method (uniq hist) write)
-       (method (uniq file) root-close)
-       (write_histogram (address (uniq hist))
-                        2
-                        (str (eval (work-path "filtered-subset-p-b.h5")))
-                        (uniq names)))
-      (load-object 'sparse-histogram
-                   (work-path "filtered-subset-p-b.h5"))
-    (for (var int i 0) (< i (field |gpart|)) (incf i)
-         (method (uniq hist) fill
-                 (aref (field |p|) i)
-                 (aref (field |b|) i)))))
+(defcpphist (filtered subset p b)
+    (res (filtered subset))
+    ((:name "p"
+            :nbins 100
+            :low 0d0
+            :high 3d0)
+     (:name "b"
+            :nbins 100
+            :low 0d0
+            :high 1.2d0))
+  (for (var int i 0) (< i (field |gpart|)) (incf i)
+       (hins (aref (field |p|) i)
+             (aref (field |b|) i))))
+
+(defcpphist (filtered subset p b test)
+    (res (filtered subset))
+    ((:name "p"
+            :nbins 100
+            :low 0d0
+            :high 2d0)
+     (:name "b"
+            :nbins 100
+            :low 0d0
+            :high 1.2d0))
+  (for (var int i 0) (< i (field |gpart|)) (incf i)
+       (hins (aref (field |p|)
+                   i)
+             (aref (field |b|)
+                   i))))
