@@ -24,26 +24,37 @@
 ;; C++ histogram definition operator
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun replace-hins (body)
+  (defun replace-hins (ndims body)
     (cond
       ((null body)
        nil)
       ((listp body)
        (if (eq (first body)
                'hins)
-           `(method (uniq hist) fill ,@(rest body))
-           (mapcar #'replace-hins body)))
+           (let ((rest-body (rest body)))
+             (if (<= ndims 3)
+                 `(method (uniq hist) fill ,@(rest body))
+                 `(progn
+                    ,@(loop
+                         for dim below ndims
+                         for form in rest-body
+                         collecting
+                           `(setf (aref (uniq xs) ,dim)
+                                  ,form))
+                    (method (uniq hist) fill
+                            (uniq xs)
+                            ,@(when (> (length rest-body) ndims)
+                                    `(,(last rest-body)))))))
+           (mapcar (lambda (x) (replace-hins ndims x))
+                   body)))
       ((atom body)
        body))))
 
 (defmacro defcpphist (id src bin-specs &body body)
   "Defines a do-cpptab target resulting in a C++ histogram.  Provides
-the following operators for use in the body:
-
-hins supplies any operators given to it to the Fill method applied to
-the histogram object being filled.
-
-(uniq hist) references the result histogram."
+the following operators for use in the body: hins supplies any
+operators given to it to the Fill method applied to the histogram
+object being filled. (uniq hist) references the result histogram."
   (let* ((ndims (length bin-specs))
          (tmppath
           (cut-newline
@@ -105,30 +116,25 @@ the histogram object being filled.
                             ,@(loop
                                  for bs in bin-specs
                                  collecting
-                                   `(str ,(getf bs :nbins))))
+                                   (getf bs :nbins)))
                   (vararray double (uniq low) (,ndims)
                             ,@(loop
                                  for bs in bin-specs
                                  collecting
-                                   `(str ,(getf bs :low))))
-                  (vararray  (uniq high) (,ndims)
-                             ,@(loop
-                                  for bs in bin-specs
-                                  collecting
-                                    `(str ,(getf bs :high))))
+                                   (getf bs :low)))
+                  (vararray double (uniq high) (,ndims)
+                            ,@(loop
+                                 for bs in bin-specs
+                                 collecting
+                                   (getf bs :high)))
+                  (vararray double (uniq xs) (,ndims))
                   (varcons THnSparseD (uniq hist)
                            (str (uniq hist))
                            (str (uniq hist))
                            ,ndims
                            (uniq nbins)
                            (uniq low)
-                           (uniq high)
-                           ,(getf (first bin-specs)
-                                  :nbins)
-                           ,(getf (first bin-specs)
-                                  :low)
-                           ,(getf (first bin-specs)
-                                  :high)))))
+                           (uniq high)))))
              `((vararray string (uniq names) (,ndims)
                          ,@(loop
                               for bs in bin-specs
@@ -142,7 +148,7 @@ the histogram object being filled.
                                ,tmppath)))
              (delete-file ,tmppath)
              result)
-         ,@(replace-hins body)))))
+         ,@(replace-hins ndims body)))))
 
 (defcppfun (pointer void) read_histogram
     ((var string filename))
@@ -1153,7 +1159,7 @@ the histogram object being filled.
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
-                         (+ i 1)))
+                         i))
           (if (= n_count_vars 2)
               (setf (aref count 1)
                     (sqrt
@@ -1163,7 +1169,7 @@ the histogram object being filled.
           (var (pointer int) indices
                (new[] int ndims))
           (pmethod h get-bin-content
-                   (+ i 1)
+                   i
                    indices)
           (for (var int axis_index 0) (< axis_index ndims) (incf axis_index)
                (var (pointer TAxis) axis

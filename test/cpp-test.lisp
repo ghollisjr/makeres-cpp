@@ -271,6 +271,61 @@
                                    field_names)))
        :output *standard-output*))
 
+(defun sparsetest ()
+  (exe "/home/ghollisjr/test/sparsetest"
+       ((function int main ()
+                  (var int ndims 4)
+                  (vararray string names (ndims)
+                            (str "a")
+                            (str "b")
+                            (str "c")
+                            (str "d"))
+                  (vararray int nbins (ndims)
+                            10 10 10 10)
+                  (vararray double low (ndims)
+                            0d0 0d0 0d0 0d0)
+                  (vararray double high (ndims)
+                            1d0 1d0 1d0 1d0)
+                  (vararray double xs (ndims))
+                  (varcons THnSparseD hist
+                           (str "hist")
+                           (str "hist")
+                           ndims
+                           nbins
+                           low
+                           high)
+                  (setf (aref xs 0)
+                        0.5d0)
+                  (setf (aref xs 1)
+                        0.5d0)
+                  (setf (aref xs 2)
+                        0.5d0)
+                  (setf (aref xs 3)
+                        0.5d0)
+                  (method hist Fill
+                          xs)
+                  (setf (aref xs 0)
+                        0.6d0)
+                  (setf (aref xs 1)
+                        0.6d0)
+                  (setf (aref xs 2)
+                        0.6d0)
+                  (setf (aref xs 3)
+                        0.6d0)
+                  (method hist Fill
+                          xs)
+                  (for (var int i 0) (<= i 2) (incf i)
+                       (<< cout
+                           (method hist
+                                   get-bin-content
+                                   i)
+                           endl))
+                  (write_histogram (address hist)
+                                   ndims
+                                   (str "/home/ghollisjr/test/sparsehist.h5")
+                                   names)))
+       :output *standard-output*))
+
 (defun gen-pass-test-data ()
   (exe "/home/ghollisjr/test/gen-cpp-table-pass-data"
        ((function

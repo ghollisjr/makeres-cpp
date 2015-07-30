@@ -46,8 +46,13 @@
 
 (setf *cpp-print-progress* 10000)
 
+(defparameter *paths*
+  (mapcar #'namestring
+          (directory "/home/ghollisjr/phd/data/skims/e1e/deuteron/a1ntp_36*.skim")))
+
 (defres src
   (cpp-srctab (list "/home/ghollisjr/test/a1ntp_36516_pass1.a00.rzn.root.skim")
+              ;; *paths*
               "h10"))
 
 (defcpphist (src p b)
@@ -158,3 +163,32 @@
                    i)
              (aref (field |b|)
                    i))))
+
+(defres (src 4part)
+  (cpp-ltab (res src) ()
+    (when (>= (field |gpart|)
+              2)
+      (push-fields))))
+
+(defcpphist (src 4part p)
+    (res (src 4part))
+    ((:name "p1"
+            :nbins 50
+            :low 0d0
+            :high 2d0)
+     (:name "p2"
+            :nbins 50
+            :low 0d0
+            :high 2d0)
+     (:name "p3"
+            :nbins 50
+            :low 0d0
+            :high 2d0)
+     (:name "p4"
+            :nbins 50
+            :low 0d0
+            :high 2d0))
+  (hins (aref (field |p|) 0)
+        (aref (field |p|) 0)
+        (aref (field |p|) 1)
+        (aref (field |p|) 1)))
