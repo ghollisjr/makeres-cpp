@@ -21,6 +21,9 @@
 
 (in-package :makeres-cpp)
 
+;; These functions support lists which can be read from files by read,
+;; not recursively stored due to non-printable elements.
+
 (defcppfun (pointer (vector double)) read_list
     ((var string filename))
   (var stringstream ss)
