@@ -45,15 +45,21 @@
 (set-cpp-work-path "/home/ghollisjr/test/makeres-cpp/cpp-work")
 
 (setf *cpp-print-progress* 10000)
+(setf *print-progress* 10000)
 
-(defparameter *paths*
+(defparameter *cpp-paths*
   (mapcar #'namestring
           (directory "/home/ghollisjr/phd/data/skims/e1e/deuteron/a1ntp_36*.skim")))
 
+(defparameter *hdf5-paths*
+  (mapcar #'namestring
+          (directory "/home/ghollisjr/phd/data/hdf/skims/e1e/deuteron/a1ntp_36*.h5")))
+
 (defres src
-  (cpp-srctab (list "/home/ghollisjr/test/a1ntp_36516_pass1.a00.rzn.root.skim")
-              ;; *paths*
-              "h10"))
+  (cpp-srctab ;; (list "/home/ghollisjr/test/a1ntp_36516_pass1.a00.rzn.root.skim")
+   ;; *cpp-paths*
+   (subseq *cpp-paths* 0 50)
+   "h10"))
 
 (defcpphist (src p b)
     (res src)
@@ -68,6 +74,22 @@
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |p|) i)
              (aref (field |b|) i))))
+
+(defres (src hdf5)
+  (srctab (hdf-chain-opener ;; *hdf5-paths*
+           (subseq *hdf5-paths* 0 50)
+           :group "/h10")))
+
+(defres ((src hdf5) p b)
+  (dotab (res (src hdf5))
+      ((hist (make-shist '((:name "p" :nbins 100 :low 0d0 :high 2d0)
+                           (:name "b" :nbins 100 :low 0d0 :high 1.2d0)))))
+      hist
+    (loop
+       for i below (field |gpart|)
+       do (hins hist
+                (list (aref (field |p|) i)
+                      (aref (field |b|) i))))))
 
 (defres filtered
   (cpp-tab (res src)
@@ -104,6 +126,29 @@
                    (aref (field |b|)
                          i)))
         (push-fields)))))
+
+(defres (convert (filtered hdf5))
+  (root2hdf (root-table-name (res filtered))
+            (first
+             (root-table-paths (res filtered)))
+            (work-path "filtered.h5")))
+
+(defres (filtered hdf5)
+  (srctab (hdf-chain-opener (list (work-path "filtered.h5"))
+                            :group "/FILTERED")
+          (res (convert (filtered hdf5)))))
+
+(defres ((filtered hdf5) p b)
+  (dotab (res (filtered hdf5))
+      ((hist (make-shist '((:name "p" :nbins 100 :low 0d0 :high 2d0)
+                           (:name "b" :nbins 100 :low 0d0 :high 1.2d0)))))
+      hist
+    (loop
+       for i below (field |gpart|)
+       do
+         (hins hist
+               (list (aref (field |p|) i)
+                     (aref (field |b|) i))))))
 
 (defcpphist (filtered p b)
     (res filtered)
@@ -192,3 +237,55 @@
         (aref (field |p|) 0)
         (aref (field |p|) 1)
         (aref (field |p|) 1)))
+
+(defres (saved (src p b))
+  (save-object (res (src p b))
+               (work-path "src-p-b.h5"))
+  t)
+
+(defres (saved (src 4part p))
+  (save-object (res (src 4part p))
+               (work-path "src-4part.h5"))
+  t)
+
+;; (defres read-2d-test
+;;   (when (res (saved (src p b)))
+;;     (exe (work-path "exe/read-2d-test")
+;;          ((function int main ()
+;;                     (var (pointer TH2D) hist
+;;                          (typecast (pointer TH2D)
+;;                                    (read_histogram
+;;                                     (str
+;;                                      (eval
+;;                                       (work-path "src-p-b.h5"))))))
+;;                     (var int nbins
+;;                          (* (pmethod hist nbinsx)
+;;                             (pmethod hist nbinsy)))
+;;                     (for (var int i 0) (< i nbins) (incf i)
+;;                          (var double content
+;;                               (pmethod hist get-bin-content i))
+;;                          (when (> content 0)
+;;                            (<< cout content endl)))))
+;;          :output *standard-output*)))
+
+;; (defres read-4d-test
+;;   (when (res (saved (src 4part p)))
+;;     (exe (work-path "exe/read-4d-test")
+;;          ((function int main ()
+;;                     (<< cout (str
+;;                               (eval
+;;                                (work-path "src-4part.h5")))
+;;                         endl)
+;;                     (var (pointer THnSparseD) hist
+;;                          (typecast (pointer THnSparseD)
+;;                                    (read_histogram
+;;                                     (str
+;;                                      (eval
+;;                                       (work-path "src-4part.h5"))))))
+;;                     (var int nbins (pmethod hist axis.nbins))
+;;                     (for (var int i 0) (< i nbins) (incf i)
+;;                          (var double content
+;;                               (pmethod hist get-bin-content i))
+;;                          (when (> content 0)
+;;                            (<< cout content endl)))))
+;;          :output *standard-output*)))

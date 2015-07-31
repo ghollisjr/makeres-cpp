@@ -43,6 +43,10 @@
    ;; ROOT tables
    :root-table
    :make-root-table
+   :root-table-paths
+   :root-table-fields-types
+   :root-table-nrows
+   :root-table-name
    :read-fields-types
    :read-nrows
    ;; Table operators

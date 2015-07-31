@@ -613,9 +613,9 @@ object being filled. (uniq hist) references the result histogram."
                                 (aref count 1)))))
                 ;; THnSparse
                 (t
-                 (var (pointer TH3D) h
-                      (typecast (pointer TH3D) result))
-                 (pmethod h xs (value count))
+                 (var (pointer THnSparseD) h
+                      (typecast (pointer THnSparseD) result))
+                 (pmethod h fill xs (value count))
                  (pmethod h
                           set-bin-error2
                           (pmethod h
