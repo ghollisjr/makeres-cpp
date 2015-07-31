@@ -43,9 +43,22 @@ program's code."
    (cond
      ((null code) nil)
      ((listp code)
-      (apply #'append
-             (required-functions (first code))
-             (mapcar #'required-functions (rest code))))
+      (cond
+        ((eq (first code)
+             'res)
+         (required-functions `(,(cpp-loader (resfn (second code)))
+                                (str ""))))
+        ((eq (first code)
+             'eval)
+         nil)
+        (t
+         (apply #'append
+                (required-functions (first code))
+                (mapcar #'required-functions (rest code)))))
+      ;; (apply #'append
+      ;;        (required-functions (first code))
+      ;;        (mapcar #'required-functions (rest code)))
+      )
      ((atom code)
       (if (gethash code *cpp-funs*)
           (list code)

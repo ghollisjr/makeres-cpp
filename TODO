@@ -1,3 +1,18 @@
+- Fix defcpphist so that the defres forms generated are static.  At
+  the moment, the defres forms are not stable, so the targets are not
+  loaded from disk on Lisp image restart.  Could add a cpp operator
+  which would return a temporary path for a list of identifiers, or
+  simply store the temporary path in a global variable and use (eval
+  ...)
+
+- There appears to be a bug in cpptrans or the underlying operators
+  such that whenever a significant number of targets need recomputing
+  the resulting code is missing variable declarations.  This may
+  disappear once I fix the above bug, but not sure.
+
+  Above bugfix indeed seems to fix this bug as well; keeping it here
+  for future reference.
+
 - test.lisp shows that
 
   -1. Serialization of histograms is not working properly.  Histograms

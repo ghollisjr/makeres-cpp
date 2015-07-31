@@ -50,15 +50,31 @@
       ((atom body)
        body))))
 
+(defparameter *proj->id->cpphist-tmppath*
+  (make-hash-table :test 'equal))
+
+(defun cpphist-tmppath (id)
+  (symbol-macrolet ((id->cpphist-tmppath
+                     (gethash (project)
+                              *proj->id->cpphist-tmppath*))
+                    (cpphist-tmppath
+                     (gethash id
+                              id->cpphist-tmppath)))
+    (when (not id->cpphist-tmppath)
+      (setf id->cpphist-tmppath
+            (make-hash-table :test 'equal)))
+    (when (not cpphist-tmppath)
+      (setf cpphist-tmppath
+            (cut-newline
+             (sh mktemp "-p" (namestring *cpp-work-path*)))))
+    cpphist-tmppath))
+
 (defmacro defcpphist (id src bin-specs &body body)
   "Defines a do-cpptab target resulting in a C++ histogram.  Provides
 the following operators for use in the body: hins supplies any
 operators given to it to the Fill method applied to the histogram
 object being filled. (uniq hist) references the result histogram."
-  (let* ((ndims (length bin-specs))
-         (tmppath
-          (cut-newline
-           (sh mktemp "-p" (namestring *cpp-work-path*)))))
+  (let* ((ndims (length bin-specs)))
     `(defres ,id
        (cpp-dotab ,src
            ,(append
@@ -141,14 +157,16 @@ object being filled. (uniq hist) references the result histogram."
                               collecting `(str ,(getf bs :name))))))
            ((write_histogram (address (uniq hist))
                              ,ndims
-                             (str ,tmppath)
+                             (str (eval (cpphist-tmppath ',id)))
                              (uniq names)))
            (let ((result
                   (load-object 'sparse-histogram
-                               ,tmppath)))
-             (delete-file ,tmppath)
+                               (cpphist-tmppath ',id))))
+             (delete-file (cpphist-tmppath ',id))
              result)
          ,@(replace-hins ndims body)))))
+
+;; Histogram read and write functions
 
 (defcppfun (pointer void) read_histogram
     ((var string filename))
@@ -1308,3 +1326,11 @@ object being filled. (uniq hist) references the result histogram."
         (h5sclose data_dataspace)))
   ;; Cleanup
   (h5fclose outfile))
+
+;; C++ conversion methods
+
+(defmethod cpp-loader ((obj sparse-histogram))
+  'read_histogram)
+
+(defmethod cpp-loader ((obj contiguous-histogram))
+  'read_histogram)

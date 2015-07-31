@@ -798,10 +798,10 @@ from pass up to src."
                   `((var long ,row-var 0)
                     (var long ,nrows-var
                          (eval (root-table-nrows
-                                ,(if (and (listp src)
-                                          (eq (first src) 'res))
-                                     src
-                                     `(res ,src)))))
+                         ,(if (and (listp src)
+                                   (eq (first src) 'res))
+                              src
+                              `(res ,src)))))
                     ;; message specifying what the pass will accomplish
                     ,@print-pass-targets)))
                (print-progress

@@ -44,3 +44,18 @@ located at hdf-file-path with root2hdf script"
                hdf-file-path))
     (sb-ext:delete-directory tmpdir :recursive t)
     hdf-file-path))
+
+;;;; Conversion from Lisp target results to C++:
+;;;;
+;;;; cpp-loader should return the symbol identifying the C++ function
+;;;; responsible for interpreting Lisp values stored on disk.
+
+(defgeneric cpp-loader (obj)
+  (:documentation "Returns name of C++ function to read object from
+  path"))
+
+(defcpp res (id)
+  (format nil "~a(~s)"
+          (string-downcase
+           (string (cpp-loader (resfn id))))
+          (namestring (target-path id "data"))))

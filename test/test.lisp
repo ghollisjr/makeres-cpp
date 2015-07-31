@@ -77,7 +77,8 @@
 
 (defres (src hdf5)
   (srctab (hdf-chain-opener ;; *hdf5-paths*
-           (subseq *hdf5-paths* 0 50)
+           ;; (subseq *hdf5-paths* 0 50)
+           (subseq *hdf5-paths* 0 1)
            :group "/h10")))
 
 (defres ((src hdf5) p b)
@@ -247,6 +248,23 @@
   (save-object (res (src 4part p))
                (work-path "src-4part.h5"))
   t)
+
+(defres conversion-test
+  (exe (work-path "exe/convert-test")
+       ((function int main ()
+                  (var (pointer TH2D) hist
+                       (typecast (pointer TH2D)
+                                 (res (src p b))))
+                  (var int nbins
+                       (* (pmethod hist nbinsx)
+                          (pmethod hist nbinsy)))
+                  (for (var int i 0) (< i nbins) (incf i)
+                       (var double content
+                            (pmethod hist get-bin-content i))
+                       (when (> content 0)
+                         (<< cout content
+                             endl)))))
+       :output *standard-output*))
 
 ;; (defres read-2d-test
 ;;   (when (res (saved (src p b)))

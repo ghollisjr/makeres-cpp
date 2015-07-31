@@ -41,16 +41,16 @@
                ;; Shell utilities
                (:file "shell")
 
+               ;; Conversion utilties
+               (:file "convert")
+
                ;; Read/Write ROOT histogram via HDF5 cl-ana formatting
                (:file "histogram")
 
                ;; ROOT table type:
                (:file "root-table")
 
-               ;; Conversion utilties
-               (:file "convert")
-               
-               ;; ;; C++ table operators
+             ;; ;; C++ table operators
                (:file "cpp-table-operators")
                ;; ;; makeres transformation stuff
                (:file "cpptrans")
