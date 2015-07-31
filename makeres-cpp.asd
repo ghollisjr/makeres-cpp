@@ -47,10 +47,13 @@
                ;; Read/Write ROOT histogram via HDF5 cl-ana formatting
                (:file "histogram")
 
+               ;; Convert Lisp lists to C++ vectors
+               (:file "list")
+
                ;; ROOT table type:
                (:file "root-table")
 
-             ;; ;; C++ table operators
+               ;; C++ table operators
                (:file "cpp-table-operators")
                ;; ;; makeres transformation stuff
                (:file "cpptrans")

@@ -266,6 +266,21 @@
                              endl)))))
        :output *standard-output*))
 
+(defres list
+  (list 1 2 3 4 5))
+
+(defres list-conversion-test
+  (exe (work-path "exe/list-conversion-test")
+       ((function int main ()
+                  (var (pointer (vector double))
+                       vec
+                       (res list))
+                  (var int size
+                       (pmethod vec size))
+                  (for (var int i 0) (< i size) (incf i)
+                       (<< cout (aref (value vec) i) endl))))
+       :output *standard-output*))
+
 ;; (defres read-2d-test
 ;;   (when (res (saved (src p b)))
 ;;     (exe (work-path "exe/read-2d-test")

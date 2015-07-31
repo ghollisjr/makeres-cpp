@@ -107,3 +107,8 @@
     (;; reading numbers from c-strings
      atoi
      atof))
+
+;; sequence functions:
+
+(defcpp push-back ()
+  "push_back")

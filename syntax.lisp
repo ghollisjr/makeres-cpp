@@ -108,7 +108,7 @@
 ;; Array referencing (operator[])
 (defcpp aref (array &rest indices)
   (with-output-to-string (out)
-    (format out "~a~{[~a]~}"
+    (format out "(~a)~{[~a]~}"
             (cpp array)
             (mapcar #'cpp indices))))
 

@@ -70,9 +70,12 @@
    ;; Utilities
    :root2hdf
 
-   ;; C++ Functions
+   ;;; C++ Functions
+   ;; histograms
    :read_histogram
    :write_histogram
+   ;; lists
+   :read_list
 
    ;; ROOT symbols
    ;; :fill
