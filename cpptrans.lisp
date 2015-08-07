@@ -810,7 +810,10 @@ from pass up to src."
                       (when (= (mod ,row-var
                                     (eval ,*cpp-print-progress*))
                                0)
-                        (<< cout (str "Event ") ,row-var
+                        (<< cout
+                            (set-precision 2)
+                            fixed
+                            (str "Event ") ,row-var
                             (str ", ")
                             (* 1d2
                                (/ (typecast float ,row-var)

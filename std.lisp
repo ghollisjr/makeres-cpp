@@ -112,3 +112,16 @@
 
 (defcpp push-back ()
   "push_back")
+
+;; iomanip functions:
+
+(defheader "iomanip"
+    (setprecision
+     fixed))
+
+(defcpp set-precision (prec)
+  (format nil "std::setprecision(~a)"
+          (cpp prec)))
+
+(defcpp fixed ()
+  "std::fixed")
