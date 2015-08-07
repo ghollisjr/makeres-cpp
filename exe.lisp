@@ -187,7 +187,7 @@ strings used as additional arguments to the compiler/linker."
                  flags
                  input
                  output
-                 (error *error-output*))
+                 (error '*error-output*))
   "Macro version of exe-fn.  Only argument not evaluated is
 top-level-forms"
   `(exe-fn ,exe-path ',top-level-forms
