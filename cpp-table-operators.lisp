@@ -42,7 +42,7 @@
 (defmacro cpp-deflfields (table-id &body lfields)
   "Sets logical fields for table-id; unlike deflfields, fields are not
 referenced via field but by their symbols alone."
-  `(deflfieldsfn ',table-id ',lfields))
+  `(cpp-deflfieldsfn ',table-id ',lfields))
 
 ;; Physical table reductions:
 (defmacro cpp-tab (source fields-types inits path
