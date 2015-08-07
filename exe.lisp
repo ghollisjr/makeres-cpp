@@ -128,7 +128,8 @@ top-level forms preceded by any required headers"
                  arguments
                  flags
                  input
-                 output)
+                 output
+                 (error *error-output*))
   "Executes code using exe-path as the path to the executable and
 exe-path.cc as the source code path.  flags should be a list of
 strings used as additional arguments to the compiler/linker."
@@ -166,16 +167,17 @@ strings used as additional arguments to the compiler/linker."
                         rf))
                   (list "-o" exe-path source-path))))
               :output *standard-output*
-              :error *standard-output*)))))
+              :error error)))))
       (when (not (zerop ret))
         (error "Error Compiling ~a.cc~%g++ return value ~a" exe-path ret)))
     (let ((ret
            (second
             (multiple-value-list
              (external-program:run exe-path
-                          arguments
-                          :output output
-                          :input input)))))
+                                   arguments
+                                   :output output
+                                   :error *error-output*
+                                   :input input)))))
       (when (not (zerop ret))
         (error "Error Executing ~a~%Return value ~a" exe-path ret)))))
 
@@ -184,7 +186,8 @@ strings used as additional arguments to the compiler/linker."
                  arguments
                  flags
                  input
-                 output)
+                 output
+                 (error *error-output*))
   "Macro version of exe-fn.  Only argument not evaluated is
 top-level-forms"
   `(exe-fn ,exe-path ',top-level-forms
@@ -195,4 +198,6 @@ top-level-forms"
            ,@(when input
                    `(:input ,input))
            ,@(when output
-                   `(:output ,output))))
+                   `(:output ,output))
+           ,@(when error
+                   `(:error ,error))))

@@ -100,7 +100,7 @@
      axis))
 
 (defcpp TAxis () "TAxis")
-  
+
 ;;;; Histograms:
 
 (with-root-header "TH1.h"
@@ -215,4 +215,32 @@
 (defcpp gaus () "Gaus")
 
 ;;;; TLorentzVector
+(with-root-header "TLorentzVector.h"
+  ((defcpp TLorentzVector ()
+     "TLorentzVector")))
 
+;;;; 3-vectors
+(with-root-header "TVector3.h"
+  ((defcpp TVector3 ()
+     "TVector3")))
+
+(defcpp angle ()
+  "Angle")
+(defcpp beta ()
+  "Beta")
+(defcpp boost ()
+  "Boost")
+(defcpp boost-vector ()
+  "BoostVector")
+(defcpp cos-theta ()
+  "CosTheta")
+(defcpp energy ()
+  "Energy")
+(defcpp minkowski-norm ()
+  "M")
+(defcpp minkowski-norm2 ()
+  "M2")
+(defcpp set-xyzm ()
+  "SetXYZM")
+(defcpp set-xyzt ()
+  "SetXYZT")

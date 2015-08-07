@@ -39,7 +39,7 @@
   nil)
 
 ;; and the macro:
-(defmacro cpp-deflfields (table-id lfields)
+(defmacro cpp-deflfields (table-id &body lfields)
   "Sets logical fields for table-id; unlike deflfields, fields are not
 referenced via field but by their symbols alone."
   `(deflfieldsfn ',table-id ',lfields))

@@ -31,8 +31,15 @@
    :defprog
    :defprog-fn
 
+   ;; define C++ token
+   :defcpp
+
    ;; define C++ library
    :deflib
+
+   ;; define C++ function
+   :defcppfun
+   :undefcppfun
 
    ;; Program generation and execution
    :exe
@@ -55,6 +62,8 @@
    :cpp-ltab
    :cpp-dotab
    :cpp-table-pass
+   :cpp-deflfields
+   :cpp-deflfieldsfn
    ;; Special reduction operators
    :ofield
    :uniq
