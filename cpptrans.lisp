@@ -285,23 +285,53 @@ non-ignored sources."
                ;; returns full list of dependencies for id, ignoring
                ;; t-stat targets (otherwise we neglect possible
                ;; optimizations)
-               (let ((deps
-                      (remove-if
-                       (lambda (d)
-                         (target-stat (gethash d target-table)))
-                       (copy-list (target-deps (gethash id target-table))))))
+               (let* ((src
+                       (if (cpp-table-reduction?
+                            (target-expr (gethash id target-table)))
+                           (unres
+                            (cpp-table-reduction-source
+                             (target-expr (gethash id target-table))))
+                           nil))
+                      (deps
+                       (remove-if
+                        (lambda (d)
+                          (and (not (equal d src))
+                               (target-stat (gethash d target-table))))
+                        (copy-list (target-deps (gethash id target-table))))))
+                 ;; (format t "rec-id: ~a, deps: ~a~%"
+                 ;;         id deps)
                  (when deps
-                   (reduce (lambda (ds d)
-                             (adjoin d ds :test #'equal))
-                           (mapcan #'rec deps)
-                           :initial-value
-                           (let ((expr
-                                  (target-expr (gethash id target-table))))
-                             (if (cpp-table-reduction? expr)
-                                 (destructuring-bind (progn tab-form) expr
-                                   (cl-ana.makeres::find-dependencies (cddr tab-form)
-                                                                      'res))
-                                 deps)))))))
+                   (list->set
+                    (reduce (lambda (ds d)
+                              (adjoin d ds :test #'equal))
+                            (mapcan #'rec
+                                    (append
+                                     ;; immediate dependencies
+                                     deps
+                                     ;; dependencies from source
+                                     (let ((expr
+                                            (target-expr (gethash id target-table))))
+                                       (when (cpp-table-reduction? expr)
+                                         (target-deps
+                                          (gethash
+                                           (unres
+                                            (cpp-table-reduction-source expr))
+                                           target-table))))))
+                            :initial-value
+                            (let ((expr
+                                   (target-expr (gethash id target-table))))
+                              (if (cpp-table-reduction? expr)
+                                  (append
+                                   (destructuring-bind (progn tab-form) expr
+                                     (cl-ana.makeres::find-dependencies
+                                      (cddr tab-form)
+                                      'res))
+                                   (target-deps
+                                    (gethash
+                                     (unres
+                                      (cpp-table-reduction-source expr))
+                                     target-table)))
+                                  deps))))))))
       (loop
          for id being the hash-keys in target-table
          do (setf (gethash id depmap)
@@ -316,23 +346,50 @@ non-ignored sources."
                ;; returns full list of dependencies for id, ignoring
                ;; t-stat dependencies (otherwise we neglect possible
                ;; optimizations).
-               (let ((deps
-                      (remove-if
-                       (lambda (d)
-                         (target-stat (gethash d target-table)))
-                       (copy-list (target-deps (gethash id target-table))))))
+               (let* ((src
+                       (if (cpp-table-reduction?
+                            (target-expr (gethash id target-table)))
+                           (unres
+                            (cpp-table-reduction-source
+                             (target-expr (gethash id target-table))))
+                           nil))
+                      (deps
+                       (remove-if
+                        (lambda (d)
+                          (and (not (equal d src))
+                               (target-stat (gethash d target-table))))
+                        (copy-list (target-deps (gethash id target-table))))))
                  (when deps
-                   (reduce (lambda (ds d)
-                             (adjoin d ds :test #'equal))
-                           (mapcan #'rec deps)
-                           :initial-value
-                           (let ((expr
-                                  (target-expr (gethash id target-table))))
-                             (if (cpp-ltab? expr)
-                                 (destructuring-bind (progn tab-form) expr
-                                   (cl-ana.makeres::find-dependencies (cddr tab-form)
-                                                                      'res))
-                                 deps)))))))
+                   (list->set
+                    (reduce (lambda (ds d)
+                              (adjoin d ds :test #'equal))
+                            (mapcan #'rec
+                                    (append
+                                     ;; immediate dependencies
+                                     deps
+                                     ;; dependencies from source
+                                     (let ((expr
+                                            (target-expr (gethash id target-table))))
+                                       (when (cpp-table-reduction? expr)
+                                         (target-deps
+                                          (gethash
+                                           (unres
+                                            (cpp-table-reduction-source expr))
+                                           target-table))))))
+                            :initial-value
+                            (let ((expr
+                                   (target-expr (gethash id target-table))))
+                              (if (cpp-ltab? expr)
+                                  (append
+                                   (destructuring-bind (progn tab-form) expr
+                                     (cl-ana.makeres::find-dependencies (cddr tab-form)
+                                                                        'res))
+                                   (target-deps
+                                    (gethash
+                                     (unres
+                                      (cpp-table-reduction-source expr))
+                                     target-table)))
+                                  deps))))))))
       (loop
          for id being the hash-keys in target-table
          do (setf (gethash id depmap)
