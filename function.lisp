@@ -37,33 +37,74 @@ program's code."
 (defmacro undefcppfun (fname)
   `(remhash ',fname *cpp-funs*))
 
+;; (defun required-functions (code)
+;;   "Returns list of required functions for code"
+;;   (list->set
+;;    (cond
+;;      ((null code) nil)
+;;      ((listp code)
+;;       (cond
+;;         ((eq (first code)
+;;              'res)
+;;          (required-functions `(,(cpp-loader (resfn (second code)))
+;;                                 (str ""))))
+;;         ((eq (first code)
+;;              'eval)
+;;          nil)
+;;         (t
+;;          (apply #'append
+;;                 (required-functions (first code))
+;;                 (mapcar #'required-functions (rest code)))))
+;;       ;; (apply #'append
+;;       ;;        (required-functions (first code))
+;;       ;;        (mapcar #'required-functions (rest code)))
+;;       )
+;;      ((atom code)
+;;       (if (gethash code *cpp-funs*)
+;;           (list code)
+;;           nil)))
+;;    #'eq))
+
 (defun required-functions (code)
   "Returns list of required functions for code"
-  (list->set
-   (cond
-     ((null code) nil)
-     ((listp code)
-      (cond
-        ((eq (first code)
-             'res)
-         (required-functions `(,(cpp-loader (resfn (second code)))
-                                (str ""))))
-        ((eq (first code)
-             'eval)
-         nil)
-        (t
-         (apply #'append
-                (required-functions (first code))
-                (mapcar #'required-functions (rest code)))))
-      ;; (apply #'append
-      ;;        (required-functions (first code))
-      ;;        (mapcar #'required-functions (rest code)))
-      )
-     ((atom code)
-      (if (gethash code *cpp-funs*)
-          (list code)
-          nil)))
-   #'eq))
+  (let ((traversed (make-hash-table :test 'eq)))
+    (labels ((rec (code)
+               ;; recurses through code
+               (list->set
+                (cond
+                  ((null code) nil)
+                  ((listp code)
+                   (cond
+                     ((eq (first code)
+                          'res)
+                      (required-functions `(,(cpp-loader (resfn (second code)))
+                                             (str ""))))
+                     ((eq (first code)
+                          'eval)
+                      nil)
+                     ((gethash (first code) traversed)
+                      nil)
+                     (t
+                      (setf (gethash (first code) traversed)
+                            t)
+                      (apply #'append
+                             (required-functions (first code))
+                             (mapcar #'required-functions (rest code)))))
+                   ;; (apply #'append
+                   ;;        (required-functions (first code))
+                   ;;        (mapcar #'required-functions (rest code)))
+                   )
+                  ((atom code)
+                   (cond
+                     ((gethash code traversed)
+                      nil)
+                     ((gethash code *cpp-funs*)
+                      (list* code
+                             (rec `(progn ,@(getf (gethash code *cpp-funs*)
+                                                  :body)))))
+                     (t nil))))
+                #'eq)))
+      (rec code))))
 
 (defun prototype (function-code)
   "Returns C++ code for the prototype of a function definition"

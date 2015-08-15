@@ -119,6 +119,8 @@ top-level forms preceded by any required headers"
          do (format out "~a~%" (cpp expr))))))
 
 (defmacro program (&body top-level-forms)
+  "Macro version of program-fn where top-level-forms are not
+evaluated."
   `(program-fn ,@(loop
                     for expr in top-level-forms
                     collecting `',expr)))

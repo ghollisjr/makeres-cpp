@@ -23,12 +23,12 @@
 
 (defcpp and (&rest expressions)
   (with-output-to-string (out)
-    (format out "(~{~a~^~( && ~)~})"
+    (format out "(~{(~a)~^~( && ~)~})"
             (mapcar #'cpp expressions))))
 
 (defcpp or (&rest expressions)
   (with-output-to-string (out)
-    (format out "(~{~a~^~( || ~)~})"
+    (format out "(~{(~a)~^~( || ~)~})"
             (mapcar #'cpp expressions))))
 
 (defcpp not (expression)
