@@ -69,7 +69,7 @@
              (sh mktemp "-p" (namestring *cpp-work-path*)))))
     cpphist-tmppath))
 
-(defmacro defcpphist (id src bin-specs &body body)
+(defmacro defcpphist (id src bin-specs inits &body body)
   "Defines a do-cpptab target resulting in a C++ histogram.  Provides
 the following operators for use in the body: hins supplies any
 operators given to it to the Fill method applied to the histogram
@@ -154,7 +154,8 @@ object being filled. (uniq hist) references the result histogram."
              `((vararray string (uniq names) (,ndims)
                          ,@(loop
                               for bs in bin-specs
-                              collecting `(str ,(getf bs :name))))))
+                              collecting `(str ,(getf bs :name)))))
+             inits)
            ((write_histogram (address (uniq hist))
                              ,ndims
                              (str (eval (cpphist-tmppath ',id)))
