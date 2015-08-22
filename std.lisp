@@ -71,9 +71,15 @@
 
 (defheader "string"
     (;; string type
-     string))
+     string
+     ;; functions
+     getline))
 
 (defstdobj string)
+
+(defcpp getline (&rest args)
+  (format nil "std::getline(~{~a~^,~})"
+          (mapcar #'cpp args)))
 
 ;; String streams & formatting
 (defheader "sstream"
