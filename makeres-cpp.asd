@@ -74,6 +74,8 @@
                (:file "math")
                ;; Code generation, compilation & execution
                (:file "exe")
+               ;; POSIX functions
+               (:file "posix")
 
                ;; HDF5
                (:file "hdf")
