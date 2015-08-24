@@ -256,3 +256,41 @@
   "Mag")
 (defcpp mag2 ()
   "Mag2")
+
+;; Types
+
+(defheader "Rtypes.h"
+    (Bool_t
+     Char_t
+     UChar_t
+     Short_t
+     UShort_t
+     Int_t
+     UInt_t
+     Long_t
+     ULong_t
+     Float_t
+     Double_t))
+
+(defcpp Bool_t ()
+  "Bool_t")
+(defcpp Char_t ()
+  "Char_t")
+(defcpp UChar_t ()
+  "UChar_t")
+(defcpp Short_t ()
+  "Short_t")
+(defcpp UShort_t ()
+  "UShort_t")
+(defcpp Int_t ()
+  "Int_t")
+(defcpp UInt_t ()
+  "UInt_t")
+(defcpp Long_t ()
+  "Long_t")
+(defcpp ULong_t ()
+  "ULong_t")
+(defcpp Float_t ()
+  "Float_t")
+(defcpp Double_t ()
+  "Double_t")

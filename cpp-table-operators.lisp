@@ -239,7 +239,7 @@ targets manually (usually more conceptually clear incidentally)."
                  ;; posts
                  ,@posts
                  ;; Cleanup:
-                 (return 0)))
+                 (exit 0)))
               :output *standard-output*))))
 
 ;;;; Special operators

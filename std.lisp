@@ -112,7 +112,13 @@
 (defheader "cstdlib"
     (;; reading numbers from c-strings
      atoi
-     atof))
+     atof
+     ;; exit
+     exit))
+
+(defcpp exit (return)
+  (format nil "exit(~a)"
+          (cpp return)))
 
 ;; sequence functions:
 
