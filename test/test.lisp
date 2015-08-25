@@ -71,6 +71,7 @@
             :nbins 100
             :low 0d0
             :high 1.2d0))
+    ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |p|) i)
              (aref (field |b|) i))))
@@ -161,6 +162,7 @@
             :nbins 100
             :low 0d0
             :high 1.2d0))
+    ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |p|) i)
              (aref (field |b|) i))))
@@ -171,6 +173,7 @@
             :nbins 100
             :low 0d0
             :high 1.2d0))
+    ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |b|) i))))
 
@@ -190,6 +193,7 @@
             :nbins 100
             :low 0d0
             :high 1.2d0))
+    ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |p|) i)
              (aref (field |b|) i))))
@@ -204,6 +208,7 @@
             :nbins 100
             :low 0d0
             :high 1.2d0))
+    ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |p|)
                    i)
@@ -234,6 +239,7 @@
             :nbins 50
             :low 0d0
             :high 2d0))
+    ()
   (hins (aref (field |p|) 0)
         (aref (field |p|) 0)
         (aref (field |p|) 1)

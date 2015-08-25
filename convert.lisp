@@ -59,3 +59,41 @@ located at hdf-file-path with root2hdf script"
           (string-downcase
            (string (cpp-loader (resfn id))))
           (namestring (target-path id "data"))))
+
+;;; Some basic loaders:
+
+;; Doubles
+(defcppfun double read_double ((var string path))
+  (var double result)
+  (varcons ifstream infile
+           (method path c-str))
+  (>> infile result)
+  (method infile close)
+  (return result))
+
+(defmethod cpp-loader ((obj double-float))
+  'read_double)
+
+;; Float
+(defcppfun float read_float ((var string path))
+  (var float result)
+  (varcons ifstream infile
+           (method path c-str))
+  (>> infile result)
+  (method infile close)
+  (return result))
+
+(defmethod cpp-loader ((obj single-float))
+  'read_float)
+
+;; Integers
+(defcppfun int read_int ((var string path))
+  (var int result)
+  (varcons ifstream infile
+           (method path c-str))
+  (>> infile result)
+  (method infile close)
+  (return result))
+
+(defmethod cpp-loader ((obj integer))
+  'read_int)

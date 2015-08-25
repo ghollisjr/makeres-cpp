@@ -85,6 +85,10 @@
    :write_histogram
    ;; lists
    :read_list
+   ;; numbers
+   :read_double
+   :read_float
+   :read_int
 
    ;; ROOT symbols
    ;; :fill
