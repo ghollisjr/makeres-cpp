@@ -1,3 +1,6 @@
++ Add concat operator which calls cpp on all args and concatenates the
+  resulting strings.
+
 - Fix defcpphist so that the defres forms generated are static.  At
   the moment, the defres forms are not stable, so the targets are not
   loaded from disk on Lisp image restart.  Could add a cpp operator
