@@ -1,3 +1,18 @@
++ tabletrans had a bug which allowed lfields to hide dependencies.  It
+  only affects projects which have res targets referred to in an
+  lfield, which means that as long as makeres-cpp forbids res targets
+  to be in lfields then there are no problems.
+
+  If the fix should be applied in the future, the following need to be done:
+
+  1. Copy/modify lfield-dependencies to work with this project's
+     lfield table
+
+  2. Add lfield-dependencies to the removed-*-dep< functions
+
+  3. Modify make-pass-target-expr so that the pass target depends on
+     any targets which the pass result targets need
+
 + Add concat operator which calls cpp on all args and concatenates the
   resulting strings.
 

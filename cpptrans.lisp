@@ -331,7 +331,8 @@ non-ignored sources."
                                      (unres
                                       (cpp-table-reduction-source expr))
                                      target-table)))
-                                  deps))))))))
+                                  deps)))
+                    #'equal)))))
       (loop
          for id being the hash-keys in target-table
          do (setf (gethash id depmap)
@@ -389,7 +390,8 @@ non-ignored sources."
                                      (unres
                                       (cpp-table-reduction-source expr))
                                      target-table)))
-                                  deps))))))))
+                                  deps)))
+                    #'equal)))))
       (loop
          for id being the hash-keys in target-table
          do (setf (gethash id depmap)
