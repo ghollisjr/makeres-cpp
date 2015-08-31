@@ -1,10 +1,10 @@
-+ tabletrans had even yet another bug.  group-ids-by-pass needs to
+- tabletrans had even yet another bug.  group-ids-by-pass needs to
   accept a test argument, and instead of trying to remove targets
   after grouping into passes, the targets must be removed by
   group-ids-by-pass prior to grouping.  See tabletrans code for
   example.
 
-+ tabletrans had a bug which allowed lfields to hide dependencies.  It
+- tabletrans had a bug which allowed lfields to hide dependencies.  It
   only affects projects which have res targets referred to in an
   lfield, which means that as long as makeres-cpp forbids res targets
   to be in lfields then there are no problems.
@@ -18,6 +18,10 @@
 
   3. Modify make-pass-target-expr so that the pass target depends on
      any targets which the pass result targets need
+
+  However: This is being marked complete since having direct res
+  dependencies in a C++ logical field would be extremely inefficient,
+  and instead inits should be used to provide access to Lisp data.
 
 + Add concat operator which calls cpp on all args and concatenates the
   resulting strings.

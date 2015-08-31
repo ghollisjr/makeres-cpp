@@ -218,7 +218,10 @@ connected via a chain of reductions from src."
                           (target-expr (gethash red target-table))))
                        imm-reds))))))
 
-(defun group-ids-by-pass (target-table src &optional dep<)
+(defun group-ids-by-pass (target-table src
+                          &key
+                            dep<
+                            (test (constantly t)))
   "Groups all ids from target-table according the the pass required
 over src using the dependency checker dep<."
   (let* ((dep< (if dep<
@@ -228,7 +231,8 @@ over src using the dependency checker dep<."
           (chained-reductions target-table src))
          (sorted-ids
           (remove-if-not (lambda (x)
-                           (member x chained :test #'equal))
+                           (and (member x chained :test #'equal)
+                                (funcall test x)))
                          (depsort-graph target-table dep<))))
     (when sorted-ids
       (let ((pass (list (pop sorted-ids)))
@@ -1067,7 +1071,14 @@ true when given the key and value from ht."
                                                        :test #'equal))
                                              pass))
                             (group-ids-by-pass
-                             graph src remcpp-ltab-dep<)))))
+                             graph src
+                             :dep< remcpp-ltab-dep<
+                             :test (lambda (i)
+                                     (not
+                                      (or (not (member i nec-reds :test #'equal))
+                                          (cpp-ltab? (target-expr (gethash i graph))))))
+                             
+                             )))))
                         ;; passes relative to ultimate source:
                         (ult-passes
                          (remove
@@ -1094,7 +1105,14 @@ true when given the key and value from ht."
                               ;; processed reduction targets:
                               graph
                               src
-                              remsrc-dep<))))))
+                              :dep< remsrc-dep<
+                              :test (lambda (i)
+                                      (not
+                                       (or (member i processed-reds :test #'equal)
+                                           (cpp-ltab? (target-expr
+                                                       (gethash i graph)))
+                                           (target-stat (gethash i graph)))))
+                              ))))))
                         ;; collapsible reductions of src:
                         (collapsible-passes
                          (mapcar (lambda (x y)
