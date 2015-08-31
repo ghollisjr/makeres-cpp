@@ -1,3 +1,9 @@
++ tabletrans had even yet another bug.  group-ids-by-pass needs to
+  accept a test argument, and instead of trying to remove targets
+  after grouping into passes, the targets must be removed by
+  group-ids-by-pass prior to grouping.  See tabletrans code for
+  example.
+
 + tabletrans had a bug which allowed lfields to hide dependencies.  It
   only affects projects which have res targets referred to in an
   lfield, which means that as long as makeres-cpp forbids res targets
