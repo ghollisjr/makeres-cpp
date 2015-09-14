@@ -35,6 +35,7 @@
                ;; Fundamental C++ code compilation & generation
                ;; utilities
                (:file "utils")
+               (:file "cpp-utils")
                ;; C++ function definition
                (:file "function")
 

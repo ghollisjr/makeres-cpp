@@ -26,16 +26,29 @@
   "Map from table id to any lfields defined via deflfields.")
 
 ;; logical lfield definition:
-(defun cpp-deflfieldsfn (table-id lfields)
-  "function version of cpp-deflfields"
+(defun cpp-deflfieldsfn (table-id lfields
+                         &key
+                           (op :set))
+  "function version of cpp-deflfields.  op can be :set, :add-front
+or :add-back"
   (when (not (gethash (project) *proj->cpp-tab->lfields*))
     (setf (gethash (project) *proj->cpp-tab->lfields*)
           (make-hash-table :test 'equal)))
   (symbol-macrolet ((lfs (gethash table-id
                                   (gethash (project)
                                            *proj->cpp-tab->lfields*))))
-    (setf lfs
-          lfields))
+    (case op
+      (:set
+       (setf lfs
+             lfields))
+      (:add-front
+       (setf lfs
+             (append lfields
+                     lfs)))
+      (:add-back
+       (setf lfs
+             (append lfs
+                     lfields)))))
   nil)
 
 ;; and the macro:

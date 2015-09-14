@@ -104,6 +104,14 @@
   (format nil "std::vector<~a>"
           (cpp type)))
 
+(defheader "map"
+    (map))
+
+(defcpp map (key-type value-type)
+  (format nil "std::map<~a,~a>"
+          (cpp key-type)
+          (cpp value-type)))
+
 ;; c_str method
 (defcpp c-str ()
   "c_str")

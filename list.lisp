@@ -39,5 +39,19 @@
   (method infile close)
   (return result))
 
+(defcppfun void write_list
+    ((var (reference (vector double)) lst)
+     (var string filename))
+  (varcons ofstream outfile
+           (method filename c-str))
+  (<< outfile (str "("))
+  (<< outfile (aref lst 0))
+  (var int lstsize (method lst size))
+  (for (var int i 1) (< i lstsize) (incf i)
+       (<< outfile (str " ") (aref lst i)))
+  (<< outfile (str ")") endl)
+  (method outfile close)
+  (return))
+
 (defmethod cpp-loader ((obj cons))
   'read_list)
