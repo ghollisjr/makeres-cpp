@@ -70,12 +70,124 @@
     cpphist-tmppath))
 
 (defmacro defcpphist (id src bin-specs inits &body body)
+  "Defines a do-jlabtab target resulting in a C++ histogram.  Provides
+the following operators for use in the body: hins supplies any
+operators given to it to the Fill method applied to the histogram
+object being filled. (uniq hist) references the result histogram."
+  `(eval `(defcpphist-raw ,',id ,',src ,,bin-specs ,',inits ,@',body)))
+
+(defmacro defcpphist-raw (id src bin-specs inits &body body)
   "Defines a do-cpptab target resulting in a C++ histogram.  Provides
 the following operators for use in the body: hins supplies any
 operators given to it to the Fill method applied to the histogram
 object being filled. (uniq hist) references the result histogram."
   (let* ((ndims (length bin-specs)))
     `(defres ,id
+       (cpp-dotab ,src
+           ,(append
+             (cond
+               ((= ndims 1)
+                `((varcons TH1D (uniq hist)
+                           (str (uniq hist))
+                           (str (uniq hist))
+                           ,(getf (first bin-specs)
+                                  :nbins)
+                           ,(getf (first bin-specs)
+                                  :low)
+                           ,(getf (first bin-specs)
+                                  :high))))
+               ((= ndims 2)
+                `((varcons TH2D (uniq hist)
+                           (str (uniq hist))
+                           (str (uniq hist))
+                           ,(getf (first bin-specs)
+                                  :nbins)
+                           ,(getf (first bin-specs)
+                                  :low)
+                           ,(getf (first bin-specs)
+                                  :high)
+                           ,(getf (second bin-specs)
+                                  :nbins)
+                           ,(getf (second bin-specs)
+                                  :low)
+                           ,(getf (second bin-specs)
+                                  :high))))
+               ((= ndims 3)
+                `((varcons TH3D (uniq hist)
+                           (str (uniq hist))
+                           (str (uniq hist))
+                           ,(getf (first bin-specs)
+                                  :nbins)
+                           ,(getf (first bin-specs)
+                                  :low)
+                           ,(getf (first bin-specs)
+                                  :high)
+                           ,(getf (second bin-specs)
+                                  :nbins)
+                           ,(getf (second bin-specs)
+                                  :low)
+                           ,(getf (second bin-specs)
+                                  :high)
+                           ,(getf (third bin-specs)
+                                  :nbins)
+                           ,(getf (third bin-specs)
+                                  :low)
+                           ,(getf (third bin-specs)
+                                  :high))))
+               (t
+                `((vararray int (uniq nbins) (,ndims)
+                            ,@(loop
+                                 for bs in bin-specs
+                                 collecting
+                                   (getf bs :nbins)))
+                  (vararray double (uniq low) (,ndims)
+                            ,@(loop
+                                 for bs in bin-specs
+                                 collecting
+                                   (getf bs :low)))
+                  (vararray double (uniq high) (,ndims)
+                            ,@(loop
+                                 for bs in bin-specs
+                                 collecting
+                                   (getf bs :high)))
+                  (vararray double (uniq xs) (,ndims))
+                  (varcons THnSparseD (uniq hist)
+                           (str (uniq hist))
+                           (str (uniq hist))
+                           ,ndims
+                           (uniq nbins)
+                           (uniq low)
+                           (uniq high)))))
+             `((vararray string (uniq names) (,ndims)
+                         ,@(loop
+                              for bs in bin-specs
+                              collecting `(str ,(getf bs :name)))))
+             inits)
+           ((write_histogram (address (uniq hist))
+                             ,ndims
+                             (str (eval (cpphist-tmppath ',id)))
+                             (uniq names)))
+           (let ((result
+                  (load-object 'sparse-histogram
+                               (cpphist-tmppath ',id))))
+             (delete-file (cpphist-tmppath ',id))
+             result)
+         ,@(replace-hins ndims body)))))
+
+(defmacro defcpphist-uniq (id src bin-specs inits &body body)
+  "Defines a do-jlabtab target resulting in a C++ histogram.  Provides
+the following operators for use in the body: hins supplies any
+operators given to it to the Fill method applied to the histogram
+object being filled. (uniq hist) references the result histogram."
+  `(eval `(defcpphist-uniq-raw ,',id ,',src ,,bin-specs ,',inits ,@',body)))
+
+(defmacro defcpphist-uniq-raw (id src bin-specs inits &body body)
+  "Defines a do-cpptab target resulting in a C++ histogram.  Provides
+the following operators for use in the body: hins supplies any
+operators given to it to the Fill method applied to the histogram
+object being filled. (uniq hist) references the result histogram."
+  (let* ((ndims (length bin-specs)))
+    `(defres-uniq ,id
        (cpp-dotab ,src
            ,(append
              (cond

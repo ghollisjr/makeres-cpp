@@ -1,3 +1,6 @@
+- Fix cpp-deflfields-fn so that it removes identical lfields.  This
+  would allow reloading lfield definitions without code growth.
+
 - tabletrans had even yet another bug.  group-ids-by-pass needs to
   accept a test argument, and instead of trying to remove targets
   after grouping into passes, the targets must be removed by

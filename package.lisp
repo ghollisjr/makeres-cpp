@@ -68,6 +68,7 @@
    :ofield
    :uniq
    :defcpphist
+   :defcpphist-uniq
    
    ;; Project settings:
    :*cpp-print-progress*
