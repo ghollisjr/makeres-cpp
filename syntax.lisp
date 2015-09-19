@@ -125,3 +125,8 @@
 ;; Evaluating a Lisp form:
 (defcpp eval (form)
   (cpp (eval form)))
+
+;; Concatenating resulting code strings:
+(defcpp concat (&rest forms)
+  (apply #'string-append
+         (mapcar #'cpp forms)))
