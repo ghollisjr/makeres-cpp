@@ -44,7 +44,7 @@
                     (method (uniq hist) fill
                             (uniq xs)
                             ,@(when (> (length rest-body) ndims)
-                                    `(,(last rest-body)))))))
+                                    `(,@(last rest-body)))))))
            (mapcar (lambda (x) (replace-hins ndims x))
                    body)))
       ((atom body)
