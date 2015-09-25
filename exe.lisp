@@ -135,7 +135,8 @@ evaluated."
   "Executes code using exe-path as the path to the executable and
 exe-path.cc as the source code path.  flags should be a list of
 strings used as additional arguments to the compiler/linker."
-  (let* ((source-path
+  (let* ((exe-path (namestring exe-path))
+         (source-path
           (string-append (namestring exe-path) ".cc"))
          (source-string (apply #'program-fn top-level-forms))
          (required-flags (compile-flags
@@ -169,7 +170,8 @@ strings used as additional arguments to the compiler/linker."
                         rf))
                   (list "-o" exe-path source-path))))
               :output *standard-output*
-              :error error)))))
+              :error error)
+             ))))
       (when (not (zerop ret))
         (error "Error Compiling ~a.cc~%g++ return value ~a" exe-path ret)))
     (let ((ret
