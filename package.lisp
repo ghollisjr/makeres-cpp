@@ -88,8 +88,11 @@
    :read_list
    ;; numbers
    :read_double
+   :write_double
    :read_float
-   :read_int
+   :write_float
+   :read_long
+   :write_long
 
    ;; ROOT symbols
    ;; :fill

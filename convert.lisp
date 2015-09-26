@@ -70,6 +70,13 @@ located at hdf-file-path with root2hdf script"
   (>> infile result)
   (method infile close)
   (return result))
+(defcppfun void write_double ((var double x)
+                              (var string path))
+  (varcons ofstream outfie
+           (method path c-str))
+  (<< outfile x endl)
+  (method outfile close)
+  (return))
 
 (defmethod cpp-loader ((obj double-float))
   'read_double)
@@ -79,21 +86,35 @@ located at hdf-file-path with root2hdf script"
   (var float result)
   (varcons ifstream infile
            (method path c-str))
-  (>> infile result)
+  (>> infile result endl)
   (method infile close)
   (return result))
+(defcppfun void write_float ((var float x)
+                             (var string path))
+  (varcons ofstream outfie
+           (method path c-str))
+  (<< outfile x endl)
+  (method outfile close)
+  (return))
 
 (defmethod cpp-loader ((obj single-float))
   'read_float)
 
-;; Integers
-(defcppfun int read_int ((var string path))
-  (var int result)
+;; Integers (long only)
+(defcppfun long read_long ((var string path))
+  (var long result)
   (varcons ifstream infile
            (method path c-str))
   (>> infile result)
   (method infile close)
   (return result))
+(defcppfun void write_long ((var long x)
+                            (var string path))
+  (varcons ofstream outfile
+           (method path c-str))
+  (<< outfile x endl)
+  (method outfile close)
+  (return))
 
 (defmethod cpp-loader ((obj integer))
-  'read_int)
+  'read_long)

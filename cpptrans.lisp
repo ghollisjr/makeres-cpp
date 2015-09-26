@@ -738,7 +738,9 @@ from pass up to src."
                     ,@(loop
                          for r in pass
                          collect
-                           (gethash r reduction->return)))))
+                           (replace-uniqsyms
+                            r
+                            (gethash r reduction->return))))))
                ;; Map from cpp-tab to ofields present in expression
 
                ;; map from table to lfields for table:
