@@ -30,6 +30,26 @@ print a progress update message.  Note that this should only be used
 for tables which know their size (so CSV tables don't work with
 this).")
 
+(defun cpp-work-path (&rest format-args)
+  "Creates pathname under *cpp-work-path* using format args.  Use
+empty string to get top cpp work directory."
+  (let* ((raw-pathname (apply #'format
+                              nil
+                              format-args))
+         (pathname
+          (merge-pathnames raw-pathname
+                           (make-pathname
+                            :directory *cpp-work-path*))))
+    (ensure-directories-exist pathname)
+    pathname))
+
+(defun purgecpp ()
+  "Deletes all cpp work contents"
+  #+sbcl
+  (sb-ext:delete-directory (cpp-work-path "")
+                           :recursive t)
+  (cpp-work-path ""))
+
 (defun cpp-exe-path ()
   (merge-pathnames "exe"
                    (make-pathname :directory *cpp-work-path*)))

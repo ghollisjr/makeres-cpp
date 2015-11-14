@@ -97,8 +97,9 @@ result table)."
   the Lisp object to return and returning it as the output value."
   nil)
 
-(defun cpp-srctab (paths name)
+(defun cpp-srctab (paths name &optional bootstrap)
   "Returns ROOT table object for use as source table"
+  (declare (ignore bootstrap))
   (make-root-table :paths paths
                    :fields-types
                    (read-fields-types paths name)
@@ -137,7 +138,10 @@ form: (field-symbol type &rest counts)
 
 macro field yields the field value of current row.
 
-macro row-number yields the row number of current row.
+long integer variable row_number yields the row number of current row.
+
+long integer variable nrows yields the number of events in the source
+table.
 
 Limitations: Make sure no forms (field X) occur which are not meant to
 reference the field value.  I've tried various options to make this
@@ -159,8 +163,6 @@ targets manually (usually more conceptually clear incidentally)."
                                                  (keywordify y)))
                                      (equal x y))))))
     (let* ((tab (gsym))
-           (nentries (gsym))
-           (entry (gsym))
            (fields
             (list->set
              (append
@@ -239,14 +241,14 @@ targets manually (usually more conceptually clear incidentally)."
                  ,@inits
 
                  ;; main loop
-                 (var long ,nentries
+                 (var long nrows
                       (method ,tab
                               entries))
-                 (for (var long ,entry 0)
-                      (< ,entry ,nentries)
-                      (incf ,entry)
+                 (for (var long row_number 0)
+                      (< row_number nrows)
+                      (incf row_number)
                       (method ,tab get-event
-                              ,entry)
+                              row_number)
                       ,@unfielded-lfields
                       ,@unfielded-body)
 

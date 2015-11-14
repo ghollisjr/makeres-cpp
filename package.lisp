@@ -73,7 +73,10 @@
    ;; Project settings:
    :*cpp-print-progress*
    :*cpp-work-path*
+   :cpp-work-path
+   :cpp-exe-path
    :set-cpp-work-path
+   :purgecpp
    :ensure-cpp-table-binding-ops
    :ensure-cpp-table-op-expanders
 

@@ -50,30 +50,13 @@
       ((atom body)
        body))))
 
-(defparameter *proj->id->cpphist-tmppath*
-  (make-hash-table :test 'equal))
-
-(defun cpphist-tmppath (id)
-  (symbol-macrolet ((id->cpphist-tmppath
-                     (gethash (project)
-                              *proj->id->cpphist-tmppath*))
-                    (cpphist-tmppath
-                     (gethash id
-                              id->cpphist-tmppath)))
-    (when (not id->cpphist-tmppath)
-      (setf id->cpphist-tmppath
-            (make-hash-table :test 'equal)))
-    (when (not cpphist-tmppath)
-      (setf cpphist-tmppath
-            (cut-newline
-             (sh mktemp "-p" (namestring *cpp-work-path*)))))
-    cpphist-tmppath))
-
 (defmacro defcpphist (id src bin-specs inits &body body)
   "Defines a do-jlabtab target resulting in a C++ histogram.  Provides
 the following operators for use in the body: hins supplies any
 operators given to it to the Fill method applied to the histogram
-object being filled. (uniq hist) references the result histogram."
+object being filled. (uniq hist) references the result
+histogram, (uniq hist-file) references the temporary file for the
+histogram."
   `(eval `(defcpphist-raw ,',id ,',src ,,bin-specs ,',inits ,@',body)))
 
 (defmacro defcpphist-raw (id src bin-specs inits &body body)
@@ -165,12 +148,12 @@ object being filled. (uniq hist) references the result histogram."
              inits)
            ((write_histogram (address (uniq hist))
                              ,ndims
-                             (str (eval (cpphist-tmppath ',id)))
+                             (str (eval (cpp-work-path (uniq hist-file))))
                              (uniq names)))
            (let ((result
                   (load-object 'sparse-histogram
-                               (cpphist-tmppath ',id))))
-             (delete-file (cpphist-tmppath ',id))
+                               (cpp-work-path (uniq hist-file)))))
+             (delete-file (cpp-work-path (uniq hist-file)))
              result)
          ,@(replace-hins ndims body)))))
 
@@ -178,7 +161,9 @@ object being filled. (uniq hist) references the result histogram."
   "Defines a do-jlabtab target resulting in a C++ histogram.  Provides
 the following operators for use in the body: hins supplies any
 operators given to it to the Fill method applied to the histogram
-object being filled. (uniq hist) references the result histogram."
+object being filled. (uniq hist) references the result
+histogram, (uniq hist-file) references the temporary output file for
+the histogram."
   `(eval `(defcpphist-uniq-raw ,',id ,',src ,,bin-specs ,',inits ,@',body)))
 
 (defmacro defcpphist-uniq-raw (id src bin-specs inits &body body)
@@ -270,12 +255,12 @@ object being filled. (uniq hist) references the result histogram."
              inits)
            ((write_histogram (address (uniq hist))
                              ,ndims
-                             (str (eval (cpphist-tmppath ',id)))
+                             (str (eval (cpp-work-path (uniq hist-file))))
                              (uniq names)))
            (let ((result
                   (load-object 'sparse-histogram
-                               (cpphist-tmppath ',id))))
-             (delete-file (cpphist-tmppath ',id))
+                               (cpp-work-path (uniq hist-file)))))
+             (delete-file (cpp-work-path (uniq hist-file)))
              result)
          ,@(replace-hins ndims body)))))
 
