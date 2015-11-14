@@ -51,7 +51,7 @@
        body))))
 
 (defmacro defcpphist (id src bin-specs inits &body body)
-  "Defines a do-jlabtab target resulting in a C++ histogram.  Provides
+  "Defines a cpp-dotab target resulting in a C++ histogram.  Provides
 the following operators for use in the body: hins supplies any
 operators given to it to the Fill method applied to the histogram
 object being filled. (uniq hist) references the result
@@ -158,7 +158,7 @@ object being filled. (uniq hist) references the result histogram."
          ,@(replace-hins ndims body)))))
 
 (defmacro defcpphist-uniq (id src bin-specs inits &body body)
-  "Defines a do-jlabtab target resulting in a C++ histogram.  Provides
+  "Defines a cpp-dotab target resulting in a C++ histogram.  Provides
 the following operators for use in the body: hins supplies any
 operators given to it to the Fill method applied to the histogram
 object being filled. (uniq hist) references the result
