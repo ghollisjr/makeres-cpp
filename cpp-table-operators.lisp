@@ -98,13 +98,15 @@ result table)."
   nil)
 
 (defun cpp-srctab (paths name &optional bootstrap)
-  "Returns ROOT table object for use as source table"
+  "Returns ROOT table object for use as source table.  paths can be a
+list of pathnames or strings."
   (declare (ignore bootstrap))
-  (make-root-table :paths paths
-                   :fields-types
-                   (read-fields-types paths name)
-                   :nrows (read-nrows paths name)
-                   :name name))
+  (let ((paths (mapcar #'namestring paths)))
+    (make-root-table :paths paths
+                     :fields-types
+                     (read-fields-types paths name)
+                     :nrows (read-nrows paths name)
+                     :name name)))
 
 ;;;; NOTES
 ;;;;
