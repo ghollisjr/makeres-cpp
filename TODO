@@ -1,3 +1,6 @@
+- Fixed multiple bugs with read_histogram and write_histogram
+  affecting all types of histograms.
+
 - Fix cpp-deflfields-fn so that it removes identical lfields.  This
   would allow reloading lfield definitions without code growth.
 

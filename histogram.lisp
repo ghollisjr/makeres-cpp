@@ -565,7 +565,9 @@ object being filled. (uniq hist) references the result histogram."
 
     ;; Read histogram data:
     (for (var int chunk_index 0)
-         (< (* chunk_index data_buffer_size)
+         ;; (< (* chunk_index data_buffer_size)
+         ;;    data_nrows)
+         (< (* chunk_index data_chunk_size)
             data_nrows)
          (incf chunk_index)
          (var (const int) chunk_size
@@ -625,8 +627,7 @@ object being filled. (uniq hist) references the result histogram."
          (var (pointer double) xs)
          (for (var int i 0) (< i (value memspace_dims)) (incf i)
               (var long buffer_index
-                   (+ (* i data_row_size)
-                      (* chunk_size chunk_index)))
+                   (* i data_row_size))
               ;; count
               (setf count
                     (typecast (pointer double)
@@ -732,12 +733,13 @@ object being filled. (uniq hist) references the result histogram."
                  (var (pointer THnSparseD) h
                       (typecast (pointer THnSparseD) result))
                  (pmethod h fill xs (value count))
-                 (pmethod h
-                          set-bin-error2
-                          (pmethod h
-                                   get-bin
-                                   xs)
-                          (aref count 1))))))
+                 (if (= n_count_vars 2)
+                     (pmethod h
+                              set-bin-error2
+                              (pmethod h
+                                       get-bin
+                                       xs)
+                              (aref count 1)))))))
     (return result)))
 
 (defcppfun void write_histogram
@@ -1033,9 +1035,16 @@ object being filled. (uniq hist) references the result histogram."
   (var hid-t data_dataset)
   (var hid-t data_dataspace)
 
+
+  ;; NOTE: Something is broken in the chunk-write algorithm such that
+  ;; only one chunk seems to be written.  Therefore, this setting is
+  ;; not correct, and writing should happen all in one chunk.
+  ;; 
   ;; Default chunk size for Lisp
-  (setf chunk_size
-        1000)
+  ;; (setf chunk_size
+  ;;       1000)
+
+  ;; Calculate chunk size:
 
   ;; Total number of events written
   (var long row 0)
@@ -1104,9 +1113,7 @@ object being filled. (uniq hist) references the result histogram."
                   (* (sizeof double)
                      (+ i n_count_vars))
                   +H5T-NATIVE-DOUBLE+))
-
-
-
+  
   ;; Amount of data in histogram
   (var long npoints)
   (cond
@@ -1195,27 +1202,43 @@ object being filled. (uniq hist) references the result histogram."
                 (pmethod h
                          get-bin-center
                          (+ i 1))))
+         ;; 2-D and 3-D histograms are broken due to i not being a
+         ;; useful global index via the standard ROOT functions, so I
+         ;; have to add special cases for them.
          (;; TH2D
           (= ndims 2)
           (var (pointer TH2D) h
                (typecast (pointer TH2D) hist))
           (var int x_index)
           (var int y_index)
-          (var int z_index)
-          (pmethod h
-                   get-bin-xyz
-                   (+ i 1)
-                   x_index y_index z_index)
 
+          ;; Set x,y indices:
+          
+          (setf x_index
+                (+ (mod i
+                        (pmethod h nbinsx))
+                   1))
+          (setf y_index
+                (+ (/ i
+                      (pmethod h nbinsx))
+                   1))
+
+          ;; Set global index:
+          (var int globindex
+               (pmethod h
+                        get-bin
+                        x_index
+                        y_index))
+          
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
-                         (+ i 1)))
+                         globindex))
           (if (= n_count_vars 2)
               (setf (aref count 1)
                     (pmethod h
                              bin-error
-                             (+ i 1))))
+                             globindex)))
           (var (pointer TAxis) xaxis
                (pmethod h x-axis))
           (var (pointer TAxis) yaxis
@@ -1236,19 +1259,40 @@ object being filled. (uniq hist) references the result histogram."
           (var int x_index)
           (var int y_index)
           (var int z_index)
-          (pmethod h
-                   get-bin-xyz
-                   (+ i 1)
-                   x_index y_index z_index)
+          ;; Set x,y,z indices:
+          
+          (setf x_index
+                (+ (mod i
+                        (pmethod h nbinsx))
+                   1))
+          (setf y_index
+                (+ (mod (/ i
+                           (pmethod h nbinsx))
+                        (pmethod h nbinsy))
+                   1))
+          (setf z_index
+                (+ (/ i
+                      (* (pmethod h nbinsx)
+                         (pmethod h nbinsy)))
+                   1))
+
+          ;; Set global index:
+          (var int globindex
+               (pmethod h
+                        get-bin
+                        x_index
+                        y_index
+                        z_index))
+          
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
-                         (+ i 1)))
+                         globindex))
           (if (= n_count_vars 2)
               (setf (aref count 1)
                     (pmethod h
                              bin-error
-                             (+ i 1))))
+                             globindex)))
           (var (pointer TAxis) xaxis
                (pmethod h x-axis))
           (var (pointer TAxis) yaxis
@@ -1293,12 +1337,6 @@ object being filled. (uniq hist) references the result histogram."
                (setf (aref xs axis_index)
                      (pmethod axis get-bin-center
                               (aref indices axis_index))))))
-       ;; debug
-       ;; (<< cout (aref count 0)
-       ;;     (str " ")
-       ;;     (aref (aref xs 0))
-       ;;     endl)
-       ;; end debug
        ;; Fill buffer whenever count or error are not zero
        (var long buf_index
             (* (mod row chunk_size)
@@ -1324,18 +1362,6 @@ object being filled. (uniq hist) references the result histogram."
              (for (var int j 0) (< j ndims) (incf j)
                   (setf (aref buf (+ buf_index j n_count_vars))
                         (aref xs j)))
-             ;; ;; debug
-             ;; (<< cout
-             ;;     buf_index (str " ")
-             ;;     (aref buf buf_index) (str " ")
-             ;;     (aref buf (+ buf_index 1)) (str " ")
-             ;;     (aref buf (+ buf_index 2)) (str " ")
-             ;;     endl)
-             ;; ;; end debug
-             ;; debug
-             ;; (<< cout row endl)
-             ;; end debug
-
              (incf row)))
        ;; When buffer full, write chunk to dataset
        (if (and (not (= row 0))
@@ -1396,16 +1422,8 @@ object being filled. (uniq hist) references the result histogram."
         (setf memspace
               (h5screate-simple 1 memspace_dims memspace_maxdims))
 
-        ;; ;; debug
-        ;; (<< cout chunk_index endl)
-        ;; ;; end debug
-
         (setf (value start) (* chunk_size
                                chunk_index))
-
-        ;; ;; debug
-        ;; (<< cout (value start) endl)
-        ;; ;; end debug
 
         (setf (value stride) 1)
         (setf (value cnt) 1)
