@@ -868,7 +868,7 @@ from pass up to src."
                                      ;; sub-bodies
                                      ;; New lfield-fixed version:
                                      (mapcar (lambda (sb)
-                                               `(progn ,@lfields ,@sb))
+                                               `(progn ,@lfields ,sb))
                                              sub-bodies)
                                      
                                      )))
