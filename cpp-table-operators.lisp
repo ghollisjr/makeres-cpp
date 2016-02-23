@@ -29,8 +29,8 @@
 (defun cpp-deflfieldsfn (table-id lfields
                          &key
                            (op :set))
-  "function version of cpp-deflfields.  op can be :set, :add-front
-or :add-back"
+  "function version of cpp-deflfields.  op can
+be :set, :add-front, :add-back or :add (same as :add-back)"
   (when (not (gethash (project) *proj->cpp-tab->lfields*))
     (setf (gethash (project) *proj->cpp-tab->lfields*)
           (make-hash-table :test 'equal)))
@@ -46,6 +46,11 @@ or :add-back"
              (remove-duplicates (append lfields lfs)
                                 :test #'equal)))
       (:add-back
+       (setf lfs
+             (remove-duplicates (append lfs
+                                        lfields)
+                                :test #'equal)))
+      (:add
        (setf lfs
              (remove-duplicates (append lfs
                                         lfields)

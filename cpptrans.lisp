@@ -845,7 +845,10 @@ from pass up to src."
                              (let ((result
                                     (replace-push-fields
                                      `(progn
-                                        ,@lfields
+                                        ;; Don't want lfields here if
+                                        ;; in sub-bodies
+                                        ;; 
+                                        ;; ,@lfields
                                         ,@(let ((bod
                                                  (cpp-table-reduction-body expr)))
                                                (if (cpp-tab? expr)
@@ -861,7 +864,14 @@ from pass up to src."
                                                     bod
                                                     :test #'equal)
                                                    bod)))
-                                     sub-bodies)))
+                                     ;; Old lfield-bugged version:
+                                     ;; sub-bodies
+                                     ;; New lfield-fixed version:
+                                     (mapcar (lambda (sb)
+                                               `(progn ,@lfields ,@sb))
+                                             sub-bodies)
+                                     
+                                     )))
                                result)
                              (first sub-bodies)))))
                   (rec context-tree)))
