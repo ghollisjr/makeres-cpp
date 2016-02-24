@@ -55,10 +55,11 @@ located at hdf-file-path with root2hdf script"
   path"))
 
 (defcpp res (id)
-  (format nil "~a(~s)"
-          (string-downcase
-           (string (cpp-loader (resfn id))))
-          (namestring (target-path id "data"))))
+  (let ((*print-pretty* nil))
+    (format nil "~a(~s)"
+            (string-downcase
+             (string (cpp-loader (resfn id))))
+            (namestring (target-path id "data")))))
 
 ;;; Some basic loaders:
 

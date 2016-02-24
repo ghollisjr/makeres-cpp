@@ -76,37 +76,38 @@ remaining arguments in the form for lists.  If there is no defined
 operator corresponding to the first element of the list, standard
 function call notation is assumed and the symbol is downcased as a
 string for the function name."
-  (handler-case
-      (when form
-        (let ((sym->fn *opsymbol->opfunction*))
-          (if (atom form)
-              (let ((form (if (and (symbolp form)
-                                   (not (equal
-                                         (package-name (symbol-package form))
-                                         "KEYWORD")))
-                              (intern (string form)
-                                      :makeres-cpp)
-                              form)))
-                (aif (gethash form sym->fn)
-                     (funcall it)
-                     (if (stringp form)
-                         form
-                         (string-downcase (mkstr form)))))
-              (let ((first
-                     (if (and (symbolp (first form))
-                              (not (equal
-                                    (package-name (symbol-package (first form)))
-                                    "KEYWORD")))
-                         (intern (string (first form))
-                                 :makeres-cpp)
-                         (first form))))
-                (aif (gethash first sym->fn)
-                     (apply it
-                            (rest form))
-                     (format nil "~a(~{~a~^,~})"
-                             (string-downcase (string first))
-                             (mapcar #'cpp (rest form))))))))
-    (error (err) (error "(cpp ~a):~%~a" form err))))
+  (let ((*print-pretty* t))
+    (handler-case
+        (when form
+          (let ((sym->fn *opsymbol->opfunction*))
+            (if (atom form)
+                (let ((form (if (and (symbolp form)
+                                     (not (equal
+                                           (package-name (symbol-package form))
+                                           "KEYWORD")))
+                                (intern (string form)
+                                        :makeres-cpp)
+                                form)))
+                  (aif (gethash form sym->fn)
+                       (funcall it)
+                       (if (stringp form)
+                           form
+                           (string-downcase (mkstr form)))))
+                (let ((first
+                       (if (and (symbolp (first form))
+                                (not (equal
+                                      (package-name (symbol-package (first form)))
+                                      "KEYWORD")))
+                           (intern (string (first form))
+                                   :makeres-cpp)
+                           (first form))))
+                  (aif (gethash first sym->fn)
+                       (apply it
+                              (rest form))
+                       (format nil "~a(~{~a~^,~})"
+                               (string-downcase (string first))
+                               (mapcar #'cpp (rest form))))))))
+      (error (err) (error "(cpp ~a):~%~a" form err)))))
 
 (defgeneric lisp->cpp (lisp-object &rest args)
   (:documentation "Generates a C++ string for the Lisp object.  args
