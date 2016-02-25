@@ -135,3 +135,59 @@
     (loop
        for i from 1 to 4
        collecting (circtest i))))
+
+;;;; Test of write and read for empty histograms
+
+(defun emptywtest ()
+  (when (probe-file (path1))
+    (delete-file (path1)))
+  (exe-fn (cpp-work-path "ewt")
+          `((function int main ()
+                      (vararray int nbins (4)
+                                10 10 10 10)
+                      (vararray double lows (4)
+                                -1 -1 -1 -1)
+                      (vararray double highs (4)
+                                1 1 1 1)
+                      (varcons THnSparseD hist
+                               (str "hist")
+                               (str "hist")
+                               4
+                               nbins
+                               lows
+                               highs)
+                      (vararray string names (4)
+                                (str "x1")
+                                (str "x2")
+                                (str "x3")
+                                (str "x4"))
+                      (write_histogram (address hist)
+                                       4
+                                       (str ,(path1))
+                                       names)
+                      (return 0)))))
+
+(defun emptyrtest ()
+  (let ((hist (make-shist '((:name "x1"
+                             :low -1d0
+                             :high 1d0
+                             :nbins 10)
+                            (:name "x2"
+                             :low -1d0
+                             :high 1d0
+                             :nbins 10)
+                            (:name "x3"
+                             :low -1d0
+                             :high 1d0
+                             :nbins 10)))))
+    (with-open-hdf-file (file (path1)
+                              :direction :output
+                              :if-exists :supersede
+                              :if-does-not-exist :create)
+      (write-histogram hist file "/histogram"))
+    (exe-fn (cpp-work-path "ert")
+            `((function int main ()
+                        (var (pointer TH3D) hist
+                             (typecast (pointer TH3D)
+                                       (read_histogram (str ,(path1)))))
+                        (return 0))))))
