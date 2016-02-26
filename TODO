@@ -1,3 +1,5 @@
+- Fixed bug with writing an empty sparse histogram
+
 - Fixed multiple bugs with read_histogram and write_histogram
   affecting all types of histograms.
 

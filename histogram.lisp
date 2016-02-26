@@ -1144,9 +1144,10 @@ object being filled. (uniq hist) references the result histogram."
           (typecast (pointer THnSparseD) hist))
      (setf npoints
            (pmethod h axis.nbins))))
-
   ;; Create dataset
-  (setf chunk_size npoints)
+  (if (= npoints 0)
+      (setf chunk_size 1)
+      (setf chunk_size npoints))
   (setf data_dataspace
         (h5screate-simple 1
                           data_dataset_dims
@@ -1165,7 +1166,6 @@ object being filled. (uniq hist) references the result histogram."
                     data_dataspace
                     cparms))
   (h5sclose data_dataspace)
-
   ;; Setup buffer
   (setf buffer
         (new[] char (* data_row_size
@@ -1175,7 +1175,6 @@ object being filled. (uniq hist) references the result histogram."
        (new[] double n_count_vars))
   (var (pointer double) xs
        (new[] double ndims))
-
   ;; Row index
   (setf row 0)
 

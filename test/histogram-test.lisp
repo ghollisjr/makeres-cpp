@@ -165,7 +165,8 @@
                                        4
                                        (str ,(path1))
                                        names)
-                      (return 0)))))
+                      (return 0)))
+          :output *standard-output*))
 
 (defun emptyrtest ()
   (let ((hist (make-shist '((:name "x1"
@@ -190,4 +191,5 @@
                         (var (pointer TH3D) hist
                              (typecast (pointer TH3D)
                                        (read_histogram (str ,(path1)))))
-                        (return 0))))))
+                        (return 0)))
+            :output *standard-output*)))
