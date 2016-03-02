@@ -103,8 +103,13 @@
                    (pipe (cat "treeclass.h")
                          (awk "BEGIN {in_branches=0} {if(/Declaration of leaf types/) in_branches=1; else if(/List of branches/) in_branches=0; else if(in_branches) print($0)}")
                          (awk "{if($0) print($0)}"))))
+              
               (cd startdir)
-              (sb-ext:delete-directory workdir :recursive t)
+              (sb-ext:delete-directory
+               (merge-pathnames workdir
+                                (make-pathname :directory
+                                               startdir))
+               :recursive t)
               result)))
          (rawvars
           (lines
