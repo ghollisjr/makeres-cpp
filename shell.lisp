@@ -98,14 +98,15 @@ into the input of the next command."
                    ,fns
                    :initial-value "")))))
 
-  (defun lines (x)
-    "Convert string into list of lines"
-    (remove ""
-            (split-sequence:split-sequence
-             #\Newline
-             (cut-newline x))
-            :test #'string=))
+  ;; (defun lines (x)
+  ;;   "Convnert string into list of lines"
+  ;;   (remove ""
+  ;;           (split-sequence:split-sequence
+  ;;            #\Newline
+  ;;            (cut-newline x))
+  ;;           :test #'string=))
 
-  (defun unlines (x)
-    "Convert list of lines into string"
-    (apply #'string-append (intersperse (format nil "~%") x))))
+  ;; (defun unlines (x)
+  ;;   "Convert list of lines into string"
+  ;;   (apply #'string-append (intersperse (format nil "~%") x)))
+  )
