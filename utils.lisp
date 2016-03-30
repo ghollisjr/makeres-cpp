@@ -92,7 +92,8 @@ string for the function name."
                        (funcall it)
                        (if (stringp form)
                            form
-                           (string-downcase (mkstr form)))))
+                           (string-downcase
+                            (lisp->cpp form)))))
                 (let ((first
                        (if (and (symbolp (first form))
                                 (not (equal
@@ -114,13 +115,21 @@ string for the function name."
   can be used along with side effects to ensure that the C++ string is
   sensible.")
   (:method ((x float) &rest args)
-    (map 'string
-         (lambda (char)
-           (if (or (char= char #\d)
-                   (char= char #\f))
-               #\e
-               char))
-         (format nil "~e" x)))
+    (let* ((rawstr (mkstr x))
+           (rawlen (length rawstr))
+           (str
+            ;; Remove unnecessary exponents
+            (if (string= (subseq rawstr (- rawlen 2))
+                         "d0")
+                (subseq rawstr 0 (- rawlen 2))
+                rawstr)))
+      (map 'string
+           (lambda (char)
+             (if (or (char= char #\d)
+                     (char= char #\f))
+                 #\e
+                 char))
+           str)))
   (:method ((x integer) &rest args)
     (format nil "~d" x))
   (:method ((x string) &rest args)
