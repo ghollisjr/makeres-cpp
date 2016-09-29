@@ -61,15 +61,44 @@ located at hdf-file-path with root2hdf script"
              (string (cpp-loader (resfn id))))
             (namestring (target-path id "data")))))
 
+;;; Due to Lisp's float and double-float syntax, it is necessary to
+;;; provide functions which parse floats and doubles, and to use these
+;;; functions for processing results.
+
+;; Basic utility function for reading a file's contents into a single
+;; string:
+(defcppfun string read_file ((var string path))
+  (varcons ifstream infile
+           (method path c-str))
+  (var stringstream ss)
+  (var string line)
+  (while (getline infile line)
+    (<< ss line endl))
+  (method infile close)
+  (return (method ss stringstream.str)))
+
+;; Utility function that replaces all f and d characters with e:
+
+(defcppfun string replace_fd ((var string s))
+  (var int nchars (method s length))
+  (var string result s)
+  (for (var int i 0) (< i nchars) (incf i)
+       (if (or (= (aref result i)
+                  "'d'")
+               (= (aref result i)
+                  "'f'"))
+           (setf (aref result i)
+                 "'e'")))
+  (return result))
+
 ;;; Some basic loaders:
 
 ;; Doubles
 (defcppfun double read_double ((var string path))
   (var double result)
-  (varcons ifstream infile
-           (method path c-str))
-  (>> infile result)
-  (method infile close)
+  (varcons stringstream ss
+           (replace_fd (read_file path)))
+  (>> ss result)
   (return result))
 (defcppfun void write_double ((var double x)
                               (var string path))
@@ -85,10 +114,9 @@ located at hdf-file-path with root2hdf script"
 ;; Float
 (defcppfun float read_float ((var string path))
   (var float result)
-  (varcons ifstream infile
-           (method path c-str))
-  (>> infile result endl)
-  (method infile close)
+  (varcons stringstream ss
+           (replace_fd (read_file path)))
+  (>> ss result)
   (return result))
 (defcppfun void write_float ((var float x)
                              (var string path))

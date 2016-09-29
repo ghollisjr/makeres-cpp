@@ -26,17 +26,15 @@
 
 (defcppfun (pointer (vector double)) read_list
     ((var string filename))
-  (var stringstream ss)
-  (varcons ifstream infile
-           (method filename c-str))
+  (varcons stringstream ss
+           (replace_fd (read_file filename)))
   (var char c)
-  (>> infile c)
+  (>> ss c)
   (var double d)
   (var (pointer (vector double)) result
        (new (vector double) 0))
-  (while (>> infile d)
+  (while (>> ss d)
     (pmethod result push-back d))
-  (method infile close)
   (return result))
 
 (defcppfun void write_list
