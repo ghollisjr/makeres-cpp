@@ -33,15 +33,18 @@ this).")
 (defun cpp-work-path (&rest format-args)
   "Creates pathname under *cpp-work-path* using format args.  Use
 empty string to get top cpp work directory."
-  (let* ((raw-pathname (apply #'format
-                              nil
-                              format-args))
-         (pathname
-          (merge-pathnames raw-pathname
-                           (make-pathname
-                            :directory *cpp-work-path*))))
-    (ensure-directories-exist pathname)
-    pathname))
+  (when *cpp-work-path*
+    (let* ((raw-pathname (if format-args
+                             (apply #'format
+                                    nil
+                                    format-args)
+                             ""))
+           (pathname
+            (merge-pathnames raw-pathname
+                             (make-pathname
+                              :directory *cpp-work-path*))))
+      (ensure-directories-exist pathname)
+      pathname)))
 
 (defun purgecpp ()
   "Deletes all cpp work contents"

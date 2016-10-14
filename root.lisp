@@ -24,6 +24,7 @@
 ;;;; General re-used method names:
 
 (defcpp fill () "Fill")
+(defcpp add () "Add")
 (defcpp write () "Write")
 ;; have to make different token due to close in fstream
 (defcpp root-close () "Close")
