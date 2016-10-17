@@ -40,21 +40,21 @@ be :set, :add-front, :add-back or :add (same as :add-back)"
     (case op
       (:set
        (setf lfs
-             (remove-duplicates lfields :test #'equal)))
+             (remove-duplicates lfields :test #'equal :from-end t)))
       (:add-front
        (setf lfs
              (remove-duplicates (append lfields lfs)
-                                :test #'equal)))
+                                :test #'equal :from-end t)))
       (:add-back
        (setf lfs
              (remove-duplicates (append lfs
                                         lfields)
-                                :test #'equal)))
+                                :test #'equal :from-end t)))
       (:add
        (setf lfs
              (remove-duplicates (append lfs
                                         lfields)
-                                :test #'equal)))))
+                                :test #'equal :from-end t)))))
   nil)
 
 ;; and the macro:
