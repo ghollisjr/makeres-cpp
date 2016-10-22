@@ -102,24 +102,6 @@ empty string to get top cpp work directory."
         (let ((tab-op (first (first forms))))
           (eq tab-op 'cpp-ltab))))))
 
-(defun resform? (expr)
-  "Returns true if expr is of the form (res x)"
-  (and (listp expr)
-       (eq (first expr)
-           'res)))
-
-(defun unres (expr)
-  "Gets id from a res form if it is a res form, if not, returns expr."
-  (if (resform? expr)
-      (second expr)
-      expr))
-
-(defun mkres (expr)
-  "Ensures that expr is a res form"
-  (if (resform? expr)
-      expr
-      (list 'res expr)))
-
 (defun cpp-table-reduction-source (expr)
   "Returns source for table reduction, nil if expr is not of a
 table-reduction."
