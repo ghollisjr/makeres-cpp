@@ -27,10 +27,7 @@
    :cpp
    ;; C++ transformation for makeres
    :cpptrans
-   ;; define a C++ program
-   :defprog
-   :defprog-fn
-
+   
    ;; define C++ token
    :defcpp
 
@@ -40,6 +37,17 @@
    ;; define C++ function
    :defcppfun
    :undefcppfun
+   :defrawcppfun ; supports explicit dependencies
+
+   ;; Define explicit function dependencies for a function symbol:
+   :set-explicit-cpp-functions
+   :explicit-cpp-functions
+   
+   ;; Define explicit headers and cheader dependencies for a symbol:
+   :set-explicit-headers
+   :explicit-headers
+   :set-explicit-cheaders
+   :explicit-cheaders
 
    ;; Program generation and execution
    :exe

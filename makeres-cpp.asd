@@ -78,6 +78,9 @@
                ;; POSIX functions
                (:file "posix")
 
+               ;; Defining raw functions:
+               (:file "raw-functions")
+               
                ;; HDF5
                (:file "hdf")
                ;; ROOT

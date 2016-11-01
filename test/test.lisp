@@ -63,14 +63,14 @@
 
 (defcpphist (src p b)
     (res src)
-    ((:name "p"
-            :nbins 100
-            :low 0d0
-            :high 3d0)
-     (:name "b"
-            :nbins 100
-            :low 0d0
-            :high 1.2d0))
+    '((:name "p"
+       :nbins 100
+       :low 0d0
+       :high 3d0)
+      (:name "b"
+       :nbins 100
+       :low 0d0
+       :high 1.2d0))
     ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |p|) i)
@@ -154,14 +154,14 @@
 
 (defcpphist (filtered p b)
     (res filtered)
-    ((:name "p"
-            :nbins 100
-            :low 0d0
-            :high 3d0)
-     (:name "b"
-            :nbins 100
-            :low 0d0
-            :high 1.2d0))
+    '((:name "p"
+       :nbins 100
+       :low 0d0
+       :high 3d0)
+      (:name "b"
+       :nbins 100
+       :low 0d0
+       :high 1.2d0))
     ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |p|) i)
@@ -169,10 +169,10 @@
 
 (defcpphist (filtered b)
     (res filtered)
-    ((:name "b"
-            :nbins 100
-            :low 0d0
-            :high 1.2d0))
+    '((:name "b"
+       :nbins 100
+       :low 0d0
+       :high 1.2d0))
     ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |b|) i))))
@@ -185,14 +185,14 @@
 
 (defcpphist (filtered subset p b)
     (res (filtered subset))
-    ((:name "p"
-            :nbins 100
-            :low 0d0
-            :high 3d0)
-     (:name "b"
-            :nbins 100
-            :low 0d0
-            :high 1.2d0))
+    '((:name "p"
+       :nbins 100
+       :low 0d0
+       :high 3d0)
+      (:name "b"
+       :nbins 100
+       :low 0d0
+       :high 1.2d0))
     ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |p|) i)
@@ -200,14 +200,14 @@
 
 (defcpphist (filtered subset p b test)
     (res (filtered subset))
-    ((:name "p"
-            :nbins 100
-            :low 0d0
-            :high 2d0)
-     (:name "b"
-            :nbins 100
-            :low 0d0
-            :high 1.2d0))
+    '((:name "p"
+       :nbins 100
+       :low 0d0
+       :high 2d0)
+      (:name "b"
+       :nbins 100
+       :low 0d0
+       :high 1.2d0))
     ()
   (for (var int i 0) (< i (field |gpart|)) (incf i)
        (hins (aref (field |p|)
@@ -223,22 +223,22 @@
 
 (defcpphist (src 4part p)
     (res (src 4part))
-    ((:name "p1"
-            :nbins 50
-            :low 0d0
-            :high 2d0)
-     (:name "p2"
-            :nbins 50
-            :low 0d0
-            :high 2d0)
-     (:name "p3"
-            :nbins 50
-            :low 0d0
-            :high 2d0)
-     (:name "p4"
-            :nbins 50
-            :low 0d0
-            :high 2d0))
+    '((:name "p1"
+       :nbins 50
+       :low 0d0
+       :high 2d0)
+      (:name "p2"
+       :nbins 50
+       :low 0d0
+       :high 2d0)
+      (:name "p3"
+       :nbins 50
+       :low 0d0
+       :high 2d0)
+      (:name "p4"
+       :nbins 50
+       :low 0d0
+       :high 2d0))
     ()
   (hins (aref (field |p|) 0)
         (aref (field |p|) 0)

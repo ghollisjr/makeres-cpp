@@ -1,5 +1,5 @@
 ;;;; makeres-cpp is a Common Lisp data analysis library.
-;;;; Copyright 2015 Gary Hollis
+;;;; Copyright 2015, 2016 Gary Hollis
 ;;;;
 ;;;; This file is part of makeres-cpp.
 ;;;;
@@ -24,6 +24,25 @@
 (defparameter *cpp-funs*
   (make-hash-table :test 'eq)
   "Map from C++ function symbol to code")
+
+(defparameter *explicit-funs*
+  (make-hash-table :test 'equal)
+  "Map from C++ function symbol to explicit function symbol
+dependencies.")
+
+(defun set-explicit-cpp-functions (symbol functions &optional (op :set))
+  "Defines explicit function dependencies.  op can be :set, :add,
+or :reset."
+  (symbol-macrolet ((fns (gethash symbol *explicit-funs*)))
+    (case op
+      (:set (setf fns functions))
+      (:add (setf fns (append functions fns)))
+      (:reset (setf fns nil)))
+    symbol))
+
+(defun explicit-cpp-functions (symbol)
+  "Returns explicit C++ function dependencies of that symbol."
+  (values (gethash symbol *explicit-funs*)))
 
 (defmacro defcppfun (type fname cpp-args &body body)
   "Defines a C++ function which is loaded automatically into a
@@ -99,9 +118,13 @@ program's code."
                      ((gethash code traversed)
                       nil)
                      ((gethash code *cpp-funs*)
-                      (list* code
-                             (rec `(progn ,@(getf (gethash code *cpp-funs*)
-                                                  :body)))))
+                      (append
+                       ;; Automatic:
+                       (list* code
+                              (rec `(progn ,@(getf (gethash code *cpp-funs*)
+                                                   :body))))
+                       ;; Explicit function dependencies:
+                       (explicit-cpp-functions code)))
                      (t nil))))
                 #'eq)))
       (rec code))))
