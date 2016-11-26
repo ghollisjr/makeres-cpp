@@ -38,6 +38,7 @@
    :defcppfun
    :undefcppfun
    :defrawcppfun ; supports explicit dependencies
+   :deffilecppfun ; like defrawcppfun but uses file for body string
 
    ;; Define explicit function dependencies for a function symbol:
    :set-explicit-cpp-functions

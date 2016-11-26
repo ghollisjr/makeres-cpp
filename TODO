@@ -1,3 +1,5 @@
+- Add ability to define cpp functions from a source file.
+
 - Fixed bug with writing an empty sparse histogram
 
 - Fixed multiple bugs with read_histogram and write_histogram

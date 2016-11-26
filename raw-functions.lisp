@@ -28,7 +28,10 @@
                           functions)
   "Defines a C++ function from its type, name, argument list, string
 for body, and allows specification of explicit header, cheader and
-function dependencies of the function.  No arguments are evaluated."
+function dependencies of the function.  No arguments are evaluated.
+Make sure that the string contains only the body with enclosing braces
+{}, and does not include the prototype, name, or type information.
+Can include these in a comment."
   `(progn
      (defcppfun ,type ,name ,cpp-args ,body-string)
      ,@(when headers
@@ -37,3 +40,24 @@ function dependencies of the function.  No arguments are evaluated."
              `((set-explicit-cheaders ',name ',cheaders)))
      ,@(when functions
              `((set-explicit-cpp-functions ',name ',functions)))))
+
+(defmacro deffilecppfun (type name cpp-args body-path
+                         &key
+                           headers
+                           cheaders
+                           functions)
+  "Calls defrawcppfun using the contents of a source file located at
+body-path.  body-path is evaluated, no other arguments are evaluated.
+Make sure that the file contains only the body with enclosing braces
+{}, and does not include the prototype, name, or type information.
+Can include these in a comment, and this is recommended for good
+style."
+  `(let* ((lines (read-lines-from-pathname ,body-path))
+          (src (apply #'string-append
+                      (intersperse (format nil "~%")
+                                   lines))))
+     (eval `(defrawcppfun ,',type ,',name ,',cpp-args
+                          ,src
+                          :headers ,',headers
+                          :cheaders ,',cheaders
+                          :functions ,',functions))))

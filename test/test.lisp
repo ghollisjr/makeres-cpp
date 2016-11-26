@@ -37,11 +37,6 @@
   (list #'macrotrans #'branchtrans #'tabletrans #'cpptrans #'progresstrans)
   (fixed-cache 5))
 
-(ensure-table-binding-ops)
-(ensure-table-op-expanders)
-(ensure-cpp-table-binding-ops)
-(ensure-cpp-table-op-expanders)
-
 (set-cpp-work-path "/home/ghollisjr/test/makeres-cpp/cpp-work")
 
 (setf *cpp-print-progress* 10000)
