@@ -119,6 +119,14 @@
     (when val
       (format out " (~a)" (cpp val)))))
 
+;; Break statement:
+(defcpp break ()
+  "break")
+
+;; Continue statement:
+(defcpp continue ()
+  "continue")
+
 ;; NULL
 (defcpp NULL () "NULL")
 
