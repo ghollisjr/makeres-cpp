@@ -400,14 +400,29 @@ non-ignored sources."
                                       (cpp-table-reduction-source expr))
                                      target-table)))
                                   deps)))
-                    #'equal)))))
+                    #'equal))))
+             (list->ht (lst)
+               (let ((result (make-hash-table :test 'equal)))
+                 (loop
+                    for elt in lst
+                    do (setf (gethash elt result) t))
+                 result)))
       (loop
          for id being the hash-keys in target-table
          do (setf (gethash id depmap)
                   (rec id)))
+      ;; Optimization: Use hash-tables for comparison, not lists
+      ;; (loop
+      ;;    for k being the hash-keys in depmap
+      ;;    do (setf (gethash k depmap)
+      ;;             (list->ht (gethash k depmap))))
       (lambda (x y)
+        ;; Old inefficient version:
         (not (member y (gethash x depmap)
-                     :test #'equal))))))
+                     :test #'equal))
+        ;; Efficient version:
+        ;; (not (gethash y (gethash x depmap)))
+        ))))
 
 ;;; Table pass expression components
 
