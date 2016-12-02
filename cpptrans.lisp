@@ -176,18 +176,6 @@ otherwise."
     (destructuring-bind (progn form) expr
       (elt form 4))))
 
-;; Non-memoized version
-;; (defun immediate-reductions (target-table tab)
-;;   "Returns list of immediately dependent table reductions for a
-;; table"
-;;   (remove-if-not (lambda (id)
-;;                    (let* ((tar (gethash id target-table))
-;;                           (expr (target-expr tar)))
-;;                      (and (cpp-table-reduction? expr)
-;;                           (equal (unres (cpp-table-reduction-source expr))
-;;                                  tab))))
-;;                  (hash-keys target-table)))
-
 ;; memoized version
 (defun-memoized immediate-reductions (target-table tab)
   "Returns list of immediately dependent table reductions for a
