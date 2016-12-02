@@ -176,7 +176,20 @@ otherwise."
     (destructuring-bind (progn form) expr
       (elt form 4))))
 
-(defun immediate-reductions (target-table tab)
+;; Non-memoized version
+;; (defun immediate-reductions (target-table tab)
+;;   "Returns list of immediately dependent table reductions for a
+;; table"
+;;   (remove-if-not (lambda (id)
+;;                    (let* ((tar (gethash id target-table))
+;;                           (expr (target-expr tar)))
+;;                      (and (cpp-table-reduction? expr)
+;;                           (equal (unres (cpp-table-reduction-source expr))
+;;                                  tab))))
+;;                  (hash-keys target-table)))
+
+;; memoized version
+(defun-memoized immediate-reductions (target-table tab)
   "Returns list of immediately dependent table reductions for a
 table"
   (remove-if-not (lambda (id)
@@ -240,6 +253,7 @@ connected via a chain of reductions from src."
 
 (defun group-ids-by-pass (target-table src
                           &key
+                            depsorted-ids
                             dep<
                             (test (constantly t)))
   "Groups all ids from target-table according the the pass required
@@ -247,13 +261,16 @@ over src using the dependency checker dep<."
   (let* ((dep< (if dep<
                    dep<
                    (dep< target-table)))
-         (chained
-          (chained-reductions target-table src))
+         (chained (chained-reductions target-table src))
          (sorted-ids
-          (remove-if-not (lambda (x)
-                           (and (member x chained :test #'equal)
-                                (funcall test x)))
-                         (depsort-graph target-table dep<))))
+          (let ((depsorted
+                 (if (null depsorted-ids)
+                     (depsort-graph target-table dep<)
+                     depsorted-ids)))
+            (remove-if-not (lambda (x)
+                             (and (member x chained :test #'equal)
+                                  (funcall test x)))
+                           depsorted))))
     (when sorted-ids
       (let ((pass (list (pop sorted-ids)))
             (result nil))
@@ -763,34 +780,34 @@ from pass up to src."
                                           (str ,(mkstr r)))
                                  ,@(let ((field->gsym
                                           (gethash r cpp-tab->field->gsym)))
-                                     (loop
-                                        for field-type in (eval (cpp-tab-fields-types expr))
-                                        appending
-                                          (destructuring-bind (field type &key length max-length)
-                                              field-type
-                                            (let ((field-gsym
-                                                   (gethash field
-                                                            field->gsym)))
-                                              (append
-                                               (if max-length
-                                                   `((vararray ,type ,field-gsym (,max-length)))
-                                                   `((var ,type ,field-gsym)))
-                                               `((method ,tree branch
-                                                         (str ,(string field))
-                                                         ,(if max-length
-                                                              field-gsym
-                                                              `(address ,field-gsym))
-                                                         (str ,(if max-length
-                                                                   (format nil
-                                                                           "~a[~a]/~a"
-                                                                           (string field)
-                                                                           length
-                                                                           (gethash type
-                                                                                    *root-branch-type-map*))
-                                                                   (format nil
-                                                                           "~a/~a"
-                                                                           (string field)
-                                                                           (gethash type *root-branch-type-map*)))))))))))))))
+                                        (loop
+                                           for field-type in (eval (cpp-tab-fields-types expr))
+                                           appending
+                                             (destructuring-bind (field type &key length max-length)
+                                                 field-type
+                                               (let ((field-gsym
+                                                      (gethash field
+                                                               field->gsym)))
+                                                 (append
+                                                  (if max-length
+                                                      `((vararray ,type ,field-gsym (,max-length)))
+                                                      `((var ,type ,field-gsym)))
+                                                  `((method ,tree branch
+                                                            (str ,(string field))
+                                                            ,(if max-length
+                                                                 field-gsym
+                                                                 `(address ,field-gsym))
+                                                            (str ,(if max-length
+                                                                      (format nil
+                                                                              "~a[~a]/~a"
+                                                                              (string field)
+                                                                              length
+                                                                              (gethash type
+                                                                                       *root-branch-type-map*))
+                                                                      (format nil
+                                                                              "~a/~a"
+                                                                              (string field)
+                                                                              (gethash type *root-branch-type-map*)))))))))))))))
                          (cpp-table-reduction-inits
                           (target-expr (gethash r graph)))
                          )))))
@@ -885,21 +902,21 @@ from pass up to src."
                                             (lambda (id)
                                               `(progn
                                                  ,@(let*
-                                                       ((rawexpr
-                                                         (target-expr
-                                                          (gethash id graph)))
-                                                        (expr
-                                                         (replace-uniqsyms
-                                                          id rawexpr)))
-                                                     (if
-                                                      (cpp-tab? expr)
-                                                      (let* ((file-tree-gsyms
-                                                              (gethash id
-                                                                       cpp-tab->file-tree-gsyms))
-                                                             (file (first file-tree-gsyms))
-                                                             (tree (second file-tree-gsyms)))
-                                                        `((method ,tree fill)))
-                                                      (cpp-table-reduction-body expr)))))
+                                                    ((rawexpr
+                                                      (target-expr
+                                                       (gethash id graph)))
+                                                     (expr
+                                                      (replace-uniqsyms
+                                                       id rawexpr)))
+                                                    (if
+                                                     (cpp-tab? expr)
+                                                     (let* ((file-tree-gsyms
+                                                             (gethash id
+                                                                      cpp-tab->file-tree-gsyms))
+                                                            (file (first file-tree-gsyms))
+                                                            (tree (second file-tree-gsyms)))
+                                                       `((method ,tree fill)))
+                                                     (cpp-table-reduction-body expr)))))
                                             (node-content node))
                                            children-exprs)
                                           :test #'equal)))))
@@ -914,19 +931,19 @@ from pass up to src."
                                         ;; ,@lfields
                                         ,@(let ((bod
                                                  (cpp-table-reduction-body expr)))
-                                            (if (cpp-tab? expr)
-                                                (sublis
-                                                 (loop
-                                                    for field in (gethash c cpp-tab->fields)
-                                                    collect
-                                                      (cons
-                                                       `(ofield ,field)
-                                                       (gethash field
-                                                                (gethash c
-                                                                         cpp-tab->field->gsym))))
-                                                 bod
-                                                 :test #'equal)
-                                                bod)))
+                                               (if (cpp-tab? expr)
+                                                   (sublis
+                                                    (loop
+                                                       for field in (gethash c cpp-tab->fields)
+                                                       collect
+                                                         (cons
+                                                          `(ofield ,field)
+                                                          (gethash field
+                                                                   (gethash c
+                                                                            cpp-tab->field->gsym))))
+                                                    bod
+                                                    :test #'equal)
+                                                   bod)))
                                      ;; Old lfield-bugged version:
                                      ;; sub-bodies
                                      ;; New lfield-fixed version:
@@ -985,22 +1002,22 @@ from pass up to src."
                                (eq (first src) 'res))
                           src
                           `(res ,src))))
-                 `((cpp-table-pass (root-table-paths
-                                    ,src-target)
-                                   (root-table-name
-                                    ,src-target)
-                                   (cpp-exe-path)
-                                   (cpp-tab-fields-types->src-fields-types
-                                    (root-table-fields-types
-                                     ,src-target))
-                                   '(,@inits
-                                     ,@print-progress-inits)
-                                   ',posts
-                                   ',lfields
-                                   '(progn
-                                     ,@print-progress
-                                     ,body))
-                   ,result-list))))))))
+                    `((cpp-table-pass (root-table-paths
+                                       ,src-target)
+                                      (root-table-name
+                                       ,src-target)
+                                      (cpp-exe-path)
+                                      (cpp-tab-fields-types->src-fields-types
+                                       (root-table-fields-types
+                                        ,src-target))
+                                      '(,@inits
+                                        ,@print-progress-inits)
+                                      ',posts
+                                      ',lfields
+                                      '(progn
+                                        ,@print-progress
+                                        ,body))
+                      ,result-list))))))))
 
 (defun set-pass-result-targets! (result-graph id pass)
   "Sets result-graph targets from pass so that they make use of the
@@ -1082,6 +1099,7 @@ true when given the key and value from ht."
 
 (defun cpptrans (target-table)
   "Performs necessary graph transformations for table operators"
+  (reset-memo-map #'immediate-reductions)
   ;; reset gsym map:
   (reset-gsym)
   ;; initialize operator expansion
@@ -1104,10 +1122,12 @@ true when given the key and value from ht."
          ;; source.
          (remsrc-dep<
           (removed-source-dep< target-table))
+         (remsrc-depsorted-ids (depsort-graph graph remsrc-dep<))
          ;; special dep< which only adds ltabs sources as dependencies
          ;; when used somewhere other than as the source additionally.
          (remcpp-ltab-dep<
           (removed-cpp-ltab-source-dep< target-table))
+         (remltab-depsorted-ids (depsort-graph graph remcpp-ltab-dep<))
          ;; result
          (result-graph
           (copy-target-table target-table))
@@ -1167,6 +1187,7 @@ true when given the key and value from ht."
                                              pass))
                             (group-ids-by-pass
                              graph src
+                             :depsorted-ids remltab-depsorted-ids
                              :dep< remcpp-ltab-dep<
                              :test (lambda (i)
                                      (not
@@ -1200,6 +1221,7 @@ true when given the key and value from ht."
                               ;; processed reduction targets:
                               graph
                               src
+                              :depsorted-ids remsrc-depsorted-ids
                               :dep< remsrc-dep<
                               :test (lambda (i)
                                       (not
