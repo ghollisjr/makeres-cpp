@@ -202,7 +202,7 @@ the chain."
                            imms))
                  (list (reverse (cons red chain))))))
     (mapcan (lambda (r)
-              (rec r (list src)))
+              (copy-list (rec r (list src))))
             (immediate-reductions target-table src))))
 
 (defun cpp-ltab-chained-reductions (target-table src)
@@ -232,7 +232,8 @@ connected via a chain of reductions from src."
     (when imm-reds
       (append imm-reds
               (mapcan (lambda (red)
-                        (chained-reductions target-table red))
+                        (copy-list
+                         (chained-reductions target-table red)))
                       (remove-if-not
                        (lambda (red)
                          (cpp-table-reduction?
@@ -463,14 +464,6 @@ non-ignored sources."
                              for elt in lst
                              do (setf (gethash elt result) t))
                           result)))
-      ;; Old code: Uses all ids from target-table
-
-      ;; (loop
-      ;;    for id being the hash-keys in target-table
-      ;;    do (setf (gethash id depmap)
-      ;;             (rec id)))
-
-      ;; New code: Only uses ids which belong to cpptrans
       (loop
          for id being the hash-keys in target-table
          when (cpp-expr? (target-expr (gethash id target-table)))
@@ -479,18 +472,9 @@ non-ignored sources."
                                    (cpp-expr?
                                     (target-expr (gethash i target-table))))
                                  (rec id))))
-      ;; Optimization: Use hash-tables for comparison, not lists
-      ;; (loop
-      ;;    for k being the hash-keys in depmap
-      ;;    do (setf (gethash k depmap)
-      ;;             (list->ht (gethash k depmap))))
       (lambda (x y)
-        ;; Old inefficient version:
         (not (member y (gethash x depmap)
-                     :test #'equal))
-        ;; Efficient version:
-        ;; (not (gethash y (gethash x depmap)))
-        ))))
+                     :test #'equal))))))
 
 ;;; Table pass expression components
 
