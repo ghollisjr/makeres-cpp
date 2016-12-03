@@ -178,8 +178,7 @@ otherwise."
 
 ;; memoized version
 (defun-memoized immediate-reductions (target-table tab)
-  "Returns list of immediately dependent table reductions for a
-table"
+  "Returns list of immediately dependent table reductions for a table"
   (remove-if-not (lambda (id)
                    (let* ((tar (gethash id target-table))
                           (expr (target-expr tar)))
@@ -188,30 +187,57 @@ table"
                                  tab))))
                  (hash-keys target-table)))
 
-(defun cpp-ltab-chains (target-table src)
+;; try to find a way to generalize and export this in tabletrans
+(defun cpp-ltab-chain-edge-map (target-table)
+  "Returns an edge map which only contains ltab-joined edges,
+i.e. either ltabs from a source, ltabs of another ltab, or a reduction
+of an ltab."
+  (let* (;; Create uncompressed edge-map
+         (uncompressed
+          (loop
+             for id being the hash-keys in target-table
+             for tar being the hash-values in target-table
+             when (or (cpp-ltab?
+                       (target-expr tar))
+                      (and (cpp-table-reduction?
+                            (target-expr tar))
+                           (cpp-ltab?
+                            (target-expr
+                             (gethash (unres
+                                       (cpp-table-reduction-source
+                                        (target-expr tar)))
+                                      target-table)))))
+             collecting (cons (unres
+                               (cpp-table-reduction-source
+                                (target-expr tar)))
+                              id))))
+    (compress-edge-map uncompressed)))
+
+;; Try to find a way to generalize this function in tabletrans
+(defun cpp-ltab-chains (ltab-chain-edge-map src)
   "Returns all cpp-ltab chains stemming from src.  A cpp-ltab chain is
 simply a list of cpp-ltab ids which are chained reductions of either
 cpp-ltabs or the source table with id src along with the first
-non-cpp-ltab id which is a reduction of the next to last cpp-ltab in
-the chain."
-  (labels ((rec (red &optional chain)
-             (if (cpp-ltab? (target-expr (gethash red target-table)))
-                 (let* ((imms (immediate-reductions target-table red)))
-                   (mapcan (lambda (r)
-                             (copy-list (rec r (cons red chain))))
-                           imms))
-                 (list (reverse (cons red chain))))))
-    (mapcan (lambda (r)
-              (copy-list (rec r (list src))))
-            (immediate-reductions target-table src))))
+non-cpp-ltab id which is a reduction of the last cpp-ltab in the
+chain."
+  (labels ((chains (s &optional context)
+             (let ((children (gethash s ltab-chain-edge-map)))
+               (if children
+                   (apply #'append
+                          (mapcar (lambda (c)
+                                    (chains c (cons s context)))
+                                  children))
+                   (list (cons s context))))))
+    (mapcar #'reverse (chains src))))
 
-(defun cpp-ltab-chained-reductions (target-table src)
+;; try to put in tabletrans and then share
+(defun cpp-ltab-chained-reductions (ltab-chain-edge-map src)
   "Returns all reductions directly from cpp-ltab chains stemming from
 src"
   (mapcar #'alexandria:last-elt
-          (cpp-ltab-chains target-table src)))
+          (cpp-ltab-chains ltab-chain-edge-map src)))
 
-(defun necessary-pass-reductions (target-table tab)
+(defun necessary-pass-reductions (target-table ltab-chain-edge-map tab)
   "Returns list of reductions of a table which must be computed via a
 pass over the table; equivalent to the union set of all immediate
 non-cpp-ltab reductions and any reductions chained directly to tab via
@@ -222,10 +248,38 @@ logical tables."
                          (target-expr
                           (gethash id target-table))))
                       (immediate-reductions target-table tab))
-           (cpp-ltab-chained-reductions target-table tab))
+           (cpp-ltab-chained-reductions ltab-chain-edge-map tab))
    #'equal))
 
-(defun chained-reductions (target-table src)
+;; This functionality is so similar that it should be added in some
+;; way to tabletrans so that it could be used by tabletrans-like tools
+(defun chained-edge-map (target-table)
+  (let* ((uncompressed nil))
+    ;; Generate uncompressed table dependency edges
+    (loop
+       for id being the hash-keys in target-table
+       for tar being the hash-values in target-table
+       when (cpp-table-reduction?
+             (target-expr tar))
+       do
+         (push (cons (unres (cpp-table-reduction-source (target-expr tar)))
+                     id)
+               uncompressed))
+    (compress-edge-map uncompressed)))
+
+;; This should be in tabletrans and used by all tabletrans-like tools
+(defun chained-reductions (chained-edge-map src)
+  "Returns all chained reductions from src in the chained-edge-map"
+  (let ((imm-reds (gethash src chained-edge-map)))
+    (when imm-reds
+      (append imm-reds
+              (mapcan (lambda (red)
+                        (copy-list
+                         (chained-reductions chained-edge-map
+                                             red)))
+                      imm-reds)))))
+
+(defun chained-reductions-old (target-table src)
   "Returns list of ids for targets from target-table which are
 connected via a chain of reductions from src."
   (let ((imm-reds (immediate-reductions target-table src)))
@@ -233,29 +287,26 @@ connected via a chain of reductions from src."
       (append imm-reds
               (mapcan (lambda (red)
                         (copy-list
-                         (chained-reductions target-table red)))
+                         (chained-reductions-old target-table red)))
                       (remove-if-not
                        (lambda (red)
                          (cpp-table-reduction?
                           (target-expr (gethash red target-table))))
                        imm-reds))))))
 
-(defun group-ids-by-pass (target-table src
+;; This function should be in tabletrans, shared by all
+;; tabletrans-like tools
+
+(defun group-ids-by-pass (chained-edge-map src
+                          depsorted-ids
+                          dep<
                           &key
-                            depsorted-ids
-                            dep<
                             (test (constantly t)))
   "Groups all ids from target-table according the the pass required
 over src using the dependency checker dep<."
-  (let* ((dep< (if dep<
-                   dep<
-                   (dep< target-table)))
-         (chained (chained-reductions target-table src))
+  (let* ((chained (chained-reductions chained-edge-map src))
          (sorted-ids
-          (let ((depsorted
-                 (if (null depsorted-ids)
-                     (depsort-graph target-table dep<)
-                     depsorted-ids)))
+          (let ((depsorted depsorted-ids))
             (remove-if-not (lambda (x)
                              (and (member x chained :test #'equal)
                                   (funcall test x)))
@@ -309,7 +360,16 @@ non-ignored sources."
                                 :test #'equal)))))))
     (set-difference srcs reds :test #'equal)))
 
-(defun removed-source-dep< (target-table)
+;; Need to modify the removed-*-dep< functions due to the new
+;; topological sort algorithm added to makeres.  The concepts of these
+;; still apply, but they must be implemented in a new way.
+;;
+;; As a quick-fix, the depmap needs to be inverted, i.e., instead of
+;; finding dependencies, you find dependents.  Then this inverted map
+;; can be returned as a compressed version of the edges of a directed
+;; acyclic graph.
+
+(defun removed-source-depmap (target-table)
   (let ((depmap (make-hash-table :test 'equal)))
     (memolet ((rec (id)
                    ;; returns full list of dependencies for id, ignoring
@@ -385,27 +445,15 @@ non-ignored sources."
                                    (cpp-expr?
                                     (target-expr (gethash i target-table))))
                                  (rec id))))
+      depmap)))
 
-      ;; This version might actually be more efficient than the one
-      ;; below, if I were to remove the above calculation of depmap.
-      ;; depmap is the result of applying rec, so if rec is memoized
-      ;; then depmap is unnecessary.
-      ;;
-      ;; However, my naive attempts to use it have failed so far.
-      ;; Maybe there are other stateful effects happening in the code
-      ;; causing problems like last time.
-      ;;
-      ;; memolet version:
-      ;; (lambda (x y)
-      ;;   (not (member y (rec x)
-      ;;                :test #'equal)))
+(defun removed-source-dep< (target-table)
+  (let ((depmap (removed-source-depmap target-table)))
+    (lambda (x y)
+      (not (member y (gethash x depmap)
+                   :test #'equal)))))
 
-      ;; depmap version
-      (lambda (x y)
-        (not (member y (gethash x depmap)
-                     :test #'equal))))))
-
-(defun removed-cpp-ltab-source-dep< (target-table)
+(defun removed-cpp-ltab-source-depmap (target-table)
   (let ((depmap (make-hash-table :test 'equal)))
     ;;(labels ((rec (id)
     (memolet ((rec (id)
@@ -472,9 +520,13 @@ non-ignored sources."
                                    (cpp-expr?
                                     (target-expr (gethash i target-table))))
                                  (rec id))))
-      (lambda (x y)
-        (not (member y (gethash x depmap)
-                     :test #'equal))))))
+      depmap)))
+
+(defun removed-cpp-ltab-source-dep< (target-table)
+  (let ((depmap (removed-cpp-ltab-source-depmap target-table)))
+    (lambda (x y)
+      (not (member y (gethash x depmap)
+                   :test #'equal)))))
 
 ;;; Table pass expression components
 
@@ -1088,18 +1140,35 @@ true when given the key and value from ht."
     (setf (gethash (project) *proj->cpp-tab->lfields*)
           (make-hash-table :test 'equal)))
   (let* ((graph (copy-target-table target-table))
+         ;; chained reduction and ltab chain edge maps
+         (chained-edge-map
+          (chained-edge-map graph))
+         (cpp-ltab-chain-edge-map
+          (cpp-ltab-chain-edge-map graph))
+         
          ;; special dep< for treating reductions as if they did not
          ;; depend on src as a source table, but preserving other
          ;; dependencies as a consequence of being a reduction of the
          ;; source.
+         
          (remsrc-dep<
           (removed-source-dep< target-table))
-         (remsrc-depsorted-ids (depsort-graph graph remsrc-dep<))
+         ;; (remsrc-depsorted-ids (depsort-graph graph remsrc-dep<))
+         (remsrc-depsorted-ids
+          (topological-sort
+           (invert-edge-map
+            (removed-source-depmap target-table))))
          ;; special dep< which only adds ltabs sources as dependencies
          ;; when used somewhere other than as the source additionally.
+
          (remcpp-ltab-dep<
           (removed-cpp-ltab-source-dep< target-table))
-         (remltab-depsorted-ids (depsort-graph graph remcpp-ltab-dep<))
+         ;; (remltab-depsorted-ids (depsort-graph graph remcpp-ltab-dep<))
+         (remltab-depsorted-ids
+          (topological-sort
+           (invert-edge-map
+            (removed-cpp-ltab-source-depmap graph))))
+         
          ;; result
          (result-graph
           (copy-target-table target-table))
@@ -1124,8 +1193,9 @@ true when given the key and value from ht."
                          (alexandria:flatten
                           (mapcar #'butlast
                                   (mapcar #'rest
-                                          (cpp-ltab-chains target-table
-                                                           src)))))))
+                                          (cpp-ltab-chains
+                                           cpp-ltab-chain-edge-map
+                                           src)))))))
                    (setf processed-srcs
                          (list->set
                           (append processed-srcs
@@ -1141,7 +1211,7 @@ true when given the key and value from ht."
                              (member k processed-reds
                                      :test #'equal))
                            (necessary-pass-reductions
-                            graph src))))
+                            graph cpp-ltab-chain-edge-map src))))
                         ;; necessary passes:
                         (nec-passes
                          (remove
@@ -1158,9 +1228,9 @@ true when given the key and value from ht."
                                                        :test #'equal))
                                              pass))
                             (group-ids-by-pass
-                             graph src
-                             :depsorted-ids remltab-depsorted-ids
-                             :dep< remcpp-ltab-dep<
+                             chained-edge-map src
+                             remltab-depsorted-ids
+                             remcpp-ltab-dep<
                              :test (lambda (i)
                                      (not
                                       (or (not (member i nec-reds :test #'equal))
@@ -1191,10 +1261,10 @@ true when given the key and value from ht."
                              (group-ids-by-pass
                               ;; must remove logical tables and previously
                               ;; processed reduction targets:
-                              graph
+                              chained-edge-map
                               src
-                              :depsorted-ids remsrc-depsorted-ids
-                              :dep< remsrc-dep<
+                              remsrc-depsorted-ids
+                              remsrc-dep<
                               :test (lambda (i)
                                       (not
                                        (or (member i processed-reds :test #'equal)
@@ -1205,6 +1275,7 @@ true when given the key and value from ht."
                         ;; collapsible reductions of src:
                         (collapsible-passes
                          (mapcar (lambda (x y)
+                                   (declare (ignore x))
                                    y)
                                  nec-passes ult-passes)))
                    (dolist (pass collapsible-passes)
