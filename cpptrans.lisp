@@ -794,12 +794,12 @@ true when given the key and value from ht."
                             :reduction-test-fn #'cpp-table-reduction?
                             :reduction-source-fn
                             #'cpp-table-reduction-source))
-         (cpp-ltab-chain-edge-map
-          (ltab-chain-edge-map graph
-                               :ltab-test-fn #'cpp-ltab?
-                               :reduction-test-fn #'cpp-table-reduction?
-                               :reduction-source-fn
-                               #'cpp-table-reduction-source))
+         ;; (cpp-ltab-chain-edge-map
+         ;;  (ltab-chain-edge-map graph
+         ;;                       :ltab-test-fn #'cpp-ltab?
+         ;;                       :reduction-test-fn #'cpp-table-reduction?
+         ;;                       :reduction-source-fn
+         ;;                       #'cpp-table-reduction-source))
 
          ;; special dep< for treating reductions as if they did not
          ;; depend on src as a source table, but preserving other
@@ -862,8 +862,15 @@ true when given the key and value from ht."
                           (mapcar #'butlast
                                   (mapcar #'rest
                                           (ltab-chains
-                                           cpp-ltab-chain-edge-map
-                                           src)))))))
+                                           graph
+                                           src
+                                           :ltab-test-fn
+                                           #'cpp-ltab?
+                                           :reduction-test-fn
+                                           #'cpp-table-reduction?
+                                           :reduction-source-fn
+                                           #'cpp-table-reduction-source
+                                           )))))))
                    (setf processed-srcs
                          (list->set
                           (append processed-srcs
@@ -879,7 +886,7 @@ true when given the key and value from ht."
                              (member k processed-reds
                                      :test #'equal))
                            (necessary-pass-reductions
-                            graph cpp-ltab-chain-edge-map src
+                            graph src
                             :ltab-test-fn #'cpp-ltab?
                             :reduction-test-fn #'cpp-table-reduction?
                             :reduction-source-fn
