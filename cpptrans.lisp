@@ -814,7 +814,8 @@ true when given the key and value from ht."
 
          (remsrc-depsorted-ids
           (topological-sort
-           (invert-edge-map
+           (invert-depmap
+            graph
             (removed-source-depmap target-table))))
          ;; special dep< which only adds ltabs sources as dependencies
          ;; when used somewhere other than as the source additionally.
@@ -828,7 +829,8 @@ true when given the key and value from ht."
          ;; (remltab-depsorted-ids (depsort-graph graph remcpp-ltab-dep<))
          (remltab-depsorted-ids
           (topological-sort
-           (invert-edge-map
+           (invert-depmap
+            graph
             (removed-ltab-source-depmap graph))))
 
          ;; result
