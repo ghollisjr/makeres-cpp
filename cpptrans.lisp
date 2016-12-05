@@ -863,14 +863,12 @@ true when given the key and value from ht."
                                   (mapcar #'rest
                                           (ltab-chains
                                            graph
+                                           chained-edge-map
                                            src
                                            :ltab-test-fn
                                            #'cpp-ltab?
-                                           :reduction-test-fn
-                                           #'cpp-table-reduction?
-                                           :reduction-source-fn
-                                           #'cpp-table-reduction-source
-                                           )))))))
+                                           :dotab-test-fn
+                                           #'cpp-dotab?)))))))
                    (setf processed-srcs
                          (list->set
                           (append processed-srcs
@@ -886,7 +884,7 @@ true when given the key and value from ht."
                              (member k processed-reds
                                      :test #'equal))
                            (necessary-pass-reductions
-                            graph src
+                            graph chained-edge-map src
                             :ltab-test-fn #'cpp-ltab?
                             :reduction-test-fn #'cpp-table-reduction?
                             :reduction-source-fn
