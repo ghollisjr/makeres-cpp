@@ -805,31 +805,33 @@ true when given the key and value from ht."
          ;; depend on src as a source table, but preserving other
          ;; dependencies as a consequence of being a reduction of the
          ;; source.
-
-         (remsrc-dep<
-          (removed-source-dep<
-           target-table
+         (remsrc-depmap
+          (removed-source-depmap
+           graph
            :reduction-test-fn #'cpp-table-reduction?
            :reduction-source-fn #'cpp-table-reduction-source))
-
+         (remsrc-dep<
+          (removed-source-dep< remsrc-depmap))
          (remsrc-depsorted-ids
           (topological-sort
            (invert-edge-map
-            (removed-source-depmap target-table))))
+            remsrc-depmap)))
          ;; special dep< which only adds ltabs sources as dependencies
          ;; when used somewhere other than as the source additionally.
-
-         (remcpp-ltab-dep<
-          (removed-ltab-source-dep<
-           target-table
+         (remltab-depmap
+          (removed-ltab-source-depmap
+           graph
            :ltab-test-fn #'cpp-ltab?
            :reduction-test-fn #'cpp-table-reduction?
            :reduction-source-fn #'cpp-table-reduction-source))
+         (remcpp-ltab-dep<
+          (removed-ltab-source-dep<
+           remltab-depmap))
          ;; (remltab-depsorted-ids (depsort-graph graph remcpp-ltab-dep<))
          (remltab-depsorted-ids
           (topological-sort
            (invert-edge-map
-            (removed-ltab-source-depmap graph))))
+            remltab-depmap)))
 
          ;; result
          (result-graph
