@@ -879,6 +879,7 @@ true when given the key and value from ht."
                                      :test #'equal))
                            (necessary-pass-reductions
                             graph chained-edge-map src
+                            :dotab-test-fn #'cpp-dotab?
                             :ltab-test-fn #'cpp-ltab?
                             :reduction-test-fn #'cpp-table-reduction?
                             :reduction-source-fn
