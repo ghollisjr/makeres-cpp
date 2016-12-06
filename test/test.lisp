@@ -53,7 +53,8 @@
 (defres src
   (cpp-srctab ;; (list "/home/ghollisjr/test/a1ntp_36516_pass1.a00.rzn.root.skim")
    ;; *cpp-paths*
-   (subseq *cpp-paths* 0 50)
+   ;; (subseq *cpp-paths* 0 50)
+   (subseq *cpp-paths* 0 5)
    "h10"))
 
 (defcpphist (src p b)
@@ -71,22 +72,22 @@
        (hins (aref (field |p|) i)
              (aref (field |b|) i))))
 
-(defres (src hdf5)
-  (srctab (hdf-chain-opener ;; *hdf5-paths*
-           ;; (subseq *hdf5-paths* 0 50)
-           (subseq *hdf5-paths* 0 1)
-           :group "/h10")))
+;; (defres (src hdf5)
+;;   (srctab (hdf-chain-opener ;; *hdf5-paths*
+;;            ;; (subseq *hdf5-paths* 0 50)
+;;            (subseq *hdf5-paths* 0 1)
+;;            :group "/h10")))
 
-(defres ((src hdf5) p b)
-  (dotab (res (src hdf5))
-      ((hist (make-shist '((:name "p" :nbins 100 :low 0d0 :high 2d0)
-                           (:name "b" :nbins 100 :low 0d0 :high 1.2d0)))))
-      hist
-    (loop
-       for i below (field |gpart|)
-       do (hins hist
-                (list (aref (field |p|) i)
-                      (aref (field |b|) i))))))
+;; (defres ((src hdf5) p b)
+;;   (dotab (res (src hdf5))
+;;       ((hist (make-shist '((:name "p" :nbins 100 :low 0d0 :high 2d0)
+;;                            (:name "b" :nbins 100 :low 0d0 :high 1.2d0)))))
+;;       hist
+;;     (loop
+;;        for i below (field |gpart|)
+;;        do (hins hist
+;;                 (list (aref (field |p|) i)
+;;                       (aref (field |b|) i))))))
 
 (defres filtered
   (cpp-tab (res src)
@@ -124,28 +125,28 @@
                          i)))
         (push-fields)))))
 
-(defres (convert (filtered hdf5))
-  (root2hdf (root-table-name (res filtered))
-            (first
-             (root-table-paths (res filtered)))
-            (work-path "filtered.h5")))
+;; (defres (convert (filtered hdf5))
+;;   (root2hdf (root-table-name (res filtered))
+;;             (first
+;;              (root-table-paths (res filtered)))
+;;             (work-path "filtered.h5")))
 
-(defres (filtered hdf5)
-  (srctab (hdf-chain-opener (list (work-path "filtered.h5"))
-                            :group "/FILTERED")
-          (res (convert (filtered hdf5)))))
+;; (defres (filtered hdf5)
+;;   (srctab (hdf-chain-opener (list (work-path "filtered.h5"))
+;;                             :group "/FILTERED")
+;;           (res (convert (filtered hdf5)))))
 
-(defres ((filtered hdf5) p b)
-  (dotab (res (filtered hdf5))
-      ((hist (make-shist '((:name "p" :nbins 100 :low 0d0 :high 2d0)
-                           (:name "b" :nbins 100 :low 0d0 :high 1.2d0)))))
-      hist
-    (loop
-       for i below (field |gpart|)
-       do
-         (hins hist
-               (list (aref (field |p|) i)
-                     (aref (field |b|) i))))))
+;; (defres ((filtered hdf5) p b)
+;;   (dotab (res (filtered hdf5))
+;;       ((hist (make-shist '((:name "p" :nbins 100 :low 0d0 :high 2d0)
+;;                            (:name "b" :nbins 100 :low 0d0 :high 1.2d0)))))
+;;       hist
+;;     (loop
+;;        for i below (field |gpart|)
+;;        do
+;;          (hins hist
+;;                (list (aref (field |p|) i)
+;;                      (aref (field |b|) i))))))
 
 (defcpphist (filtered p b)
     (res filtered)
@@ -250,37 +251,37 @@
                (work-path "src-4part.h5"))
   t)
 
-(defres conversion-test
-  (exe (work-path "exe/convert-test")
-       ((function int main ()
-                  (var (pointer TH2D) hist
-                       (typecast (pointer TH2D)
-                                 (res (src p b))))
-                  (var int nbins
-                       (* (pmethod hist nbinsx)
-                          (pmethod hist nbinsy)))
-                  (for (var int i 0) (< i nbins) (incf i)
-                       (var double content
-                            (pmethod hist get-bin-content i))
-                       (when (> content 0)
-                         (<< cout content
-                             endl)))))
-       :output *standard-output*))
+;; (defres conversion-test
+;;   (exe (work-path "exe/convert-test")
+;;        ((function int main ()
+;;                   (var (pointer TH2D) hist
+;;                        (typecast (pointer TH2D)
+;;                                  (res (src p b))))
+;;                   (var int nbins
+;;                        (* (pmethod hist nbinsx)
+;;                           (pmethod hist nbinsy)))
+;;                   (for (var int i 0) (< i nbins) (incf i)
+;;                        (var double content
+;;                             (pmethod hist get-bin-content i))
+;;                        (when (> content 0)
+;;                          (<< cout content
+;;                              endl)))))
+;;        :output *standard-output*))
 
 (defres list
   (list 1 2 3 4 5))
 
-(defres list-conversion-test
-  (exe (work-path "exe/list-conversion-test")
-       ((function int main ()
-                  (var (pointer (vector double))
-                       vec
-                       (res list))
-                  (var int size
-                       (pmethod vec size))
-                  (for (var int i 0) (< i size) (incf i)
-                       (<< cout (aref (value vec) i) endl))))
-       :output *standard-output*))
+;; (defres list-conversion-test
+;;   (exe (work-path "exe/list-conversion-test")
+;;        ((function int main ()
+;;                   (var (pointer (vector double))
+;;                        vec
+;;                        (res list))
+;;                   (var int size
+;;                        (pmethod vec size))
+;;                   (for (var int i 0) (< i size) (incf i)
+;;                        (<< cout (aref (value vec) i) endl))))
+;;        :output *standard-output*))
 
 ;; (defres read-2d-test
 ;;   (when (res (saved (src p b)))

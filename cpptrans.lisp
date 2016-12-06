@@ -452,34 +452,34 @@ from pass up to src."
                                           (str ,(mkstr r)))
                                  ,@(let ((field->gsym
                                           (gethash r cpp-tab->field->gsym)))
-                                     (loop
-                                        for field-type in (eval (cpp-tab-fields-types expr))
-                                        appending
-                                          (destructuring-bind (field type &key length max-length)
-                                              field-type
-                                            (let ((field-gsym
-                                                   (gethash field
-                                                            field->gsym)))
-                                              (append
-                                               (if max-length
-                                                   `((vararray ,type ,field-gsym (,max-length)))
-                                                   `((var ,type ,field-gsym)))
-                                               `((method ,tree branch
-                                                         (str ,(string field))
-                                                         ,(if max-length
-                                                              field-gsym
-                                                              `(address ,field-gsym))
-                                                         (str ,(if max-length
-                                                                   (format nil
-                                                                           "~a[~a]/~a"
-                                                                           (string field)
-                                                                           length
-                                                                           (gethash type
-                                                                                    *root-branch-type-map*))
-                                                                   (format nil
-                                                                           "~a/~a"
-                                                                           (string field)
-                                                                           (gethash type *root-branch-type-map*)))))))))))))))
+                                        (loop
+                                           for field-type in (eval (cpp-tab-fields-types expr))
+                                           appending
+                                             (destructuring-bind (field type &key length max-length)
+                                                 field-type
+                                               (let ((field-gsym
+                                                      (gethash field
+                                                               field->gsym)))
+                                                 (append
+                                                  (if max-length
+                                                      `((vararray ,type ,field-gsym (,max-length)))
+                                                      `((var ,type ,field-gsym)))
+                                                  `((method ,tree branch
+                                                            (str ,(string field))
+                                                            ,(if max-length
+                                                                 field-gsym
+                                                                 `(address ,field-gsym))
+                                                            (str ,(if max-length
+                                                                      (format nil
+                                                                              "~a[~a]/~a"
+                                                                              (string field)
+                                                                              length
+                                                                              (gethash type
+                                                                                       *root-branch-type-map*))
+                                                                      (format nil
+                                                                              "~a/~a"
+                                                                              (string field)
+                                                                              (gethash type *root-branch-type-map*)))))))))))))))
                          (cpp-table-reduction-inits
                           (target-expr (gethash r graph)))
                          )))))
@@ -574,21 +574,21 @@ from pass up to src."
                                             (lambda (id)
                                               `(progn
                                                  ,@(let*
-                                                       ((rawexpr
-                                                         (target-expr
-                                                          (gethash id graph)))
-                                                        (expr
-                                                         (replace-uniqsyms
-                                                          id rawexpr)))
-                                                     (if
-                                                      (cpp-tab? expr)
-                                                      (let* ((file-tree-gsyms
-                                                              (gethash id
-                                                                       cpp-tab->file-tree-gsyms))
-                                                             (file (first file-tree-gsyms))
-                                                             (tree (second file-tree-gsyms)))
-                                                        `((method ,tree fill)))
-                                                      (cpp-table-reduction-body expr)))))
+                                                    ((rawexpr
+                                                      (target-expr
+                                                       (gethash id graph)))
+                                                     (expr
+                                                      (replace-uniqsyms
+                                                       id rawexpr)))
+                                                    (if
+                                                     (cpp-tab? expr)
+                                                     (let* ((file-tree-gsyms
+                                                             (gethash id
+                                                                      cpp-tab->file-tree-gsyms))
+                                                            (file (first file-tree-gsyms))
+                                                            (tree (second file-tree-gsyms)))
+                                                       `((method ,tree fill)))
+                                                     (cpp-table-reduction-body expr)))))
                                             (node-content node))
                                            children-exprs)
                                           :test #'equal)))))
@@ -603,19 +603,19 @@ from pass up to src."
                                         ;; ,@lfields
                                         ,@(let ((bod
                                                  (cpp-table-reduction-body expr)))
-                                            (if (cpp-tab? expr)
-                                                (sublis
-                                                 (loop
-                                                    for field in (gethash c cpp-tab->fields)
-                                                    collect
-                                                      (cons
-                                                       `(ofield ,field)
-                                                       (gethash field
-                                                                (gethash c
-                                                                         cpp-tab->field->gsym))))
-                                                 bod
-                                                 :test #'equal)
-                                                bod)))
+                                               (if (cpp-tab? expr)
+                                                   (sublis
+                                                    (loop
+                                                       for field in (gethash c cpp-tab->fields)
+                                                       collect
+                                                         (cons
+                                                          `(ofield ,field)
+                                                          (gethash field
+                                                                   (gethash c
+                                                                            cpp-tab->field->gsym))))
+                                                    bod
+                                                    :test #'equal)
+                                                   bod)))
                                      ;; Old lfield-bugged version:
                                      ;; sub-bodies
                                      ;; New lfield-fixed version:
@@ -674,22 +674,22 @@ from pass up to src."
                                (eq (first src) 'res))
                           src
                           `(res ,src))))
-                 `((cpp-table-pass (root-table-paths
-                                    ,src-target)
-                                   (root-table-name
-                                    ,src-target)
-                                   (cpp-exe-path)
-                                   (cpp-tab-fields-types->src-fields-types
-                                    (root-table-fields-types
-                                     ,src-target))
-                                   '(,@inits
-                                     ,@print-progress-inits)
-                                   ',posts
-                                   ',lfields
-                                   '(progn
-                                     ,@print-progress
-                                     ,body))
-                   ,result-list))))))))
+                    `((cpp-table-pass (root-table-paths
+                                       ,src-target)
+                                      (root-table-name
+                                       ,src-target)
+                                      (cpp-exe-path)
+                                      (cpp-tab-fields-types->src-fields-types
+                                       (root-table-fields-types
+                                        ,src-target))
+                                      '(,@inits
+                                        ,@print-progress-inits)
+                                      ',posts
+                                      ',lfields
+                                      '(progn
+                                        ,@print-progress
+                                        ,body))
+                      ,result-list))))))))
 
 (defun set-pass-result-targets! (result-graph id pass)
   "Sets result-graph targets from pass so that they make use of the
@@ -840,6 +840,13 @@ true when given the key and value from ht."
          (processed-srcs nil)
          ;; list of reduction targets already processed:
          (processed-reds nil))
+    ;; debug
+    (let ((*print-pretty* nil))
+      (format t "remsrc-depsorted-ids=~a~%"
+              remsrc-depsorted-ids)
+      (format t "chained-edge-map=~a~%"
+              (map->alist chained-edge-map)))
+    ;; end debug
     (labels
         ((trans ()
            (let ((srcs
@@ -893,6 +900,11 @@ true when given the key and value from ht."
                             #'cpp-table-reduction-source))))
                         ;; necessary passes:
                         (nec-passes
+                         (progn
+                           ;; debug
+                           (format t "Computing nec-passes, src=~a~%" src)
+                           (format t "nec-reds=~a~%" nec-reds)
+                           ;; end debug
                          (remove
                           nil
                           (mapcar
@@ -915,9 +927,18 @@ true when given the key and value from ht."
                                       (or (not (member i nec-reds :test #'equal))
                                           (cpp-ltab? (target-expr (gethash i graph))))))
 
-                             )))))
+                             ))))))
                         ;; passes relative to ultimate source:
                         (ult-passes
+                         (progn
+                           ;; debug
+                           (format t "Computing ult-passes, src=~a~%" src)
+                           (format t "processed-reds=~a~%" processed-reds)
+                           (format t "chained-edge-map=~a~%"
+                                   (map->alist chained-edge-map))
+                           (format t "remsrc-depmap=~a~%"
+                                   (map->alist remsrc-depmap))
+                           ;; end debug
                          (remove
                           nil
                           (mapcar
@@ -950,13 +971,20 @@ true when given the key and value from ht."
                                            (cpp-ltab? (target-expr
                                                        (gethash i graph)))
                                            (target-stat (gethash i graph)))))
-                              ))))))
+                              )))))))
                         ;; collapsible reductions of src:
                         (collapsible-passes
-                         (mapcar (lambda (x y)
-                                   (declare (ignore x))
-                                   y)
-                                 nec-passes ult-passes)))
+                         (progn
+                           ;; debug
+                           (format t "collapsible-passes for src=~a~%" src)
+                           (format t "nec-passes=~a~%" nec-passes)
+                           (format t "ult-passes=~a~%" ult-passes)
+                           ;; end debug
+                           (mapcar (lambda (x y)
+                                     (declare (ignore x))
+                                     y)
+                                   nec-passes ult-passes)
+                           )))
                    (dolist (pass collapsible-passes)
                      (dolist (p pass)
                        (push p processed-reds))
