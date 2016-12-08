@@ -178,7 +178,11 @@
   ((defcpp tchain ()
      "TChain")
    (defcpp add-file ()
-     "AddFile")))
+     "AddFile")
+   (defcpp get-tree-number ()
+     "GetTreeNumber")
+   (defcpp get-n-trees ()
+     "GetNtrees")))
 
 ;;;; TFiles
 (with-root-header "TFile.h"

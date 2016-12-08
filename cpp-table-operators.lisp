@@ -150,6 +150,10 @@ long integer variable row_number yields the row number of current row.
 long integer variable nrows yields the number of events in the source
 table.
 
+long integer file_index is the index starting with 0 of the file being
+analyzed.  Useful for using or computing file-specific values, such as
+run number or pathname.
+
 Limitations: Make sure no forms (field X) occur which are not meant to
 reference the field value.  I've tried various options to make this
 work via macros but nothing short of code walking looks viable, and
@@ -245,17 +249,25 @@ targets manually (usually more conceptually clear incidentally)."
                                     set-branch-address
                                     (str ,(string field))
                                     ,symbol))))
-                 ,@inits
-
-                 ;; main loop
+                 ;; Initialization
                  (var long nrows
                       (method ,tab
                               entries))
+                 (var long file_index -1)
+                 ;; Run user inits after standard inits
+                 ,@inits
+                 ;; main loop
                  (for (var long row_number 0)
                       (< row_number nrows)
                       (incf row_number)
+                      ;; get next event
                       (method ,tab get-event
                               row_number)
+                      ;; set file index
+                      (setf file_index
+                            (method ,tab
+                                    get-tree-number))
+                      ;; Set user lfields and execute body
                       ,@unfielded-lfields
                       ,@unfielded-body)
 
