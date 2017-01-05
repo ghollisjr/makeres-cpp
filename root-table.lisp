@@ -110,7 +110,7 @@
                                 (make-pathname :directory
                                                startdir))
                :recursive t)
-              result)))
+              (makeres-cpp::cut-newline result))))
          (rawvars
           (lines
            (pipe (echo branches)
