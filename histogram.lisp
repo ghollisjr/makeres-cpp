@@ -754,12 +754,16 @@ object being filled. (uniq hist) references the result histogram."
                   +H5P-DEFAULT+
                   +H5P-DEFAULT+))
 
+  (var bool cleanup_field_names
+       false)
+
   ;; Compute or set field_names information
   (var (pointer int) name_lengths
        (new[] int ndims))
   (var int max_name_length 0)
   (if (= field_names 0)
       (progn
+        (setf cleanup_field_names true)
         (setf field_names
               (new[] string ndims))
         ;; setup field_names
@@ -1335,7 +1339,8 @@ object being filled. (uniq hist) references the result histogram."
                     (pmethod h get-axis axis_index))
                (setf (aref xs axis_index)
                      (pmethod axis get-bin-center
-                              (aref indices axis_index))))))
+                              (aref indices axis_index))))
+          (delete[] indices)))
        ;; Fill buffer whenever count or error are not zero
        (var long buf_index
             (* (mod row chunk_size)
@@ -1440,7 +1445,32 @@ object being filled. (uniq hist) references the result histogram."
         (h5sclose memspace)
         (h5sclose data_dataspace)))
   ;; Cleanup
-  (h5fclose outfile))
+  (h5fclose outfile)
+  ;; Cleanup memory:
+  (delete[] name_lengths)
+  (if cleanup_field_names
+      (delete[] field_names))
+  (delete[] nbins)
+  (delete[] low)
+  (delete[] high)
+  (delete[] axes)
+  (delete[] buffer)
+  (delete name_type_dims)
+  (delete binspec_chunkdims)
+  (delete binspec_dataset_dims)
+  (delete binspec_dataset_maxdims)
+  (delete start)
+  (delete stride)
+  (delete cnt)
+  (delete blck)
+  (delete memspace_dims)
+  (delete memspace_maxdims)
+  (delete data_dataset_dims)
+  (delete data_dataset_maxdims)
+  (delete data_chunk_dims)
+  (delete[] count)
+  (delete[] xs)
+  )
 
 ;; C++ conversion methods
 
