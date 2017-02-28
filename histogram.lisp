@@ -740,6 +740,14 @@ object being filled. (uniq hist) references the result histogram."
                                        get-bin
                                        xs)
                               (aref count 1)))))))
+    ;; Cleanup:
+    (delete binspec_dataset_dims)
+    (delete binspec_chunk_dims)
+    (delete data_dataset_dims)
+    (delete data_chunk_dims)
+    (delete memspace_dims)
+    (delete memspace_maxdims)
+    ;; Return:
     (return result)))
 
 (defcppfun void write_histogram
