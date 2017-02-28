@@ -460,7 +460,14 @@ object being filled. (uniq hist) references the result histogram."
                                   buffer_index
                                   (H5Tget-member-offset binspec_datatype
                                                         4)))))
-              (incf row)))
+              (incf row))
+         ;; Loop cleanup
+         (delete memspace_maxdims)
+         (delete start)
+         (delete stride)
+         (delete cnt)
+         (delete blck)
+         )
 
     ;;; Create histogram result
 
@@ -739,7 +746,13 @@ object being filled. (uniq hist) references the result histogram."
                               (pmethod h
                                        get-bin
                                        xs)
-                              (aref count 1)))))))
+                              (aref count 1))))))
+              ;; Cleanup
+              (delete memspace_maxdims)
+              (delete start)
+              (delete stride)
+              (delete cnt)
+              (delete blck))
     ;; Cleanup:
     (delete binspec_dataset_dims)
     (delete binspec_chunk_dims)
@@ -747,6 +760,12 @@ object being filled. (uniq hist) references the result histogram."
     (delete data_chunk_dims)
     (delete memspace_dims)
     (delete memspace_maxdims)
+    (delete binspec_name_dims)
+    (delete nbins)
+    (delete low)
+    (delete high)
+    (delete buffer)
+    
     ;; Return:
     (return result)))
 
