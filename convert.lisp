@@ -102,7 +102,7 @@ located at hdf-file-path with root2hdf script"
   (return result))
 (defcppfun void write_double ((var double x)
                               (var string path))
-  (varcons ofstream outfie
+  (varcons ofstream outfile
            (method path c-str))
   (<< outfile x endl)
   (method outfile close)
