@@ -68,6 +68,8 @@
   "GetBinLowEdge")
 (defcpp bin-up-edge ()
   "GetBinUpEdge")
+(defcpp sumw2 ()
+  "Sumw2")
 (defcpp get-sumw2-n ()
   "GetSumw2N")
 (defcpp get-calculate-errors ()

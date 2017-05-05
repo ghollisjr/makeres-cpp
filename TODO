@@ -1,3 +1,7 @@
++ (uniq hist) references the wrong symbol, since hist is not an
+  external symbol in the makeres-cpp package.  Either change to
+  keyword or externalize the symbol so it can be used.
+
 - Add ability to define cpp functions from a source file.
 
 - Fixed bug with writing an empty sparse histogram
