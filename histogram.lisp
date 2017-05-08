@@ -44,7 +44,7 @@
                     (method (uniq hist) fill
                             (uniq xs)
                             ,@(when (> (length rest-body) ndims)
-                                    `(,@(last rest-body)))))))
+                                `(,@(last rest-body)))))))
            (mapcar (lambda (x) (replace-hins ndims x))
                    body)))
       ((atom body)
@@ -145,7 +145,8 @@ object being filled. (uniq hist) references the result histogram."
                          ,@(loop
                               for bs in bin-specs
                               collecting `(str ,(getf bs :name)))))
-             inits)
+             inits
+             `((method (uniq hist) sumw2)))
            ((write_histogram (address (uniq hist))
                              ,ndims
                              (str (eval (cpp-work-path (uniq hist-file))))
@@ -252,7 +253,8 @@ object being filled. (uniq hist) references the result histogram."
                          ,@(loop
                               for bs in bin-specs
                               collecting `(str ,(getf bs :name)))))
-             inits)
+             inits
+             `((method (uniq hist) sumw2)))
            ((write_histogram (address (uniq hist))
                              ,ndims
                              (str (eval (cpp-work-path (uniq hist-file))))
@@ -469,69 +471,7 @@ object being filled. (uniq hist) references the result histogram."
          (delete blck)
          )
 
-    ;;; Create histogram result
 
-    (cond
-      (;; 1-D
-       (= ndims 1)
-       (setf result
-             (typecast
-              (pointer void)
-              (new TH1D
-                   (str "hist")
-                   (str "hist")
-
-                   (aref nbins 0)
-                   (aref low 0)
-                   (aref high 0)))))
-      (;; 2-D
-       (= ndims 2)
-       (setf result
-             (typecast
-              (pointer void)
-              (new TH2D
-                   (str "hist")
-                   (str "hist")
-
-                   (aref nbins 0)
-                   (aref low 0)
-                   (aref high 0)
-
-                   (aref nbins 1)
-                   (aref low 1)
-                   (aref high 1)))))
-      (;; 3-D
-       (= ndims 3)
-       (setf result
-             (typecast
-              (pointer void)
-              (new TH3D
-                   (str "hist")
-                   (str "hist")
-
-                   (aref nbins 0)
-                   (aref low 0)
-                   (aref high 0)
-
-                   (aref nbins 1)
-                   (aref low 1)
-                   (aref high 1)
-
-                   (aref nbins 2)
-                   (aref low 2)
-                   (aref high 2)))))
-      (;; Sparse
-       t
-       (setf result
-             (typecast
-              (pointer void)
-              (new THnSparseD
-                   (str "hist")
-                   (str "hist")
-                   ndims
-                   nbins
-                   low
-                   high)))))
 
     ;; chunking information
     (setf create_plist
@@ -570,6 +510,90 @@ object being filled. (uniq hist) references the result histogram."
     (setf buffer
           (new[] char data_buffer_size))
 
+    ;;; Create histogram result
+
+    (cond
+      (;; 1-D
+       (= ndims 1)
+       (setf result
+             (typecast
+              (pointer void)
+              (new TH1D
+                   (str "hist")
+                   (str "hist")
+
+                   (aref nbins 0)
+                   (aref low 0)
+                   (aref high 0))))
+       (cond
+         ((= n_count_vars 2)
+          (var (pointer TH1D) h
+               (typecast (pointer TH1D) result))
+          (pmethod h sumw2))))
+      (;; 2-D
+       (= ndims 2)
+       (setf result
+             (typecast
+              (pointer void)
+              (new TH2D
+                   (str "hist")
+                   (str "hist")
+
+                   (aref nbins 0)
+                   (aref low 0)
+                   (aref high 0)
+
+                   (aref nbins 1)
+                   (aref low 1)
+                   (aref high 1))))
+       (cond
+         ((= n_count_vars 2)
+          (var (pointer TH2D) h
+               (typecast (pointer TH2D) result))
+          (pmethod h sumw2))))
+      (;; 3-D
+       (= ndims 3)
+       (setf result
+             (typecast
+              (pointer void)
+              (new TH3D
+                   (str "hist")
+                   (str "hist")
+
+                   (aref nbins 0)
+                   (aref low 0)
+                   (aref high 0)
+
+                   (aref nbins 1)
+                   (aref low 1)
+                   (aref high 1)
+
+                   (aref nbins 2)
+                   (aref low 2)
+                   (aref high 2))))
+       (cond
+         ((= n_count_vars 2)
+          (var (pointer TH3D) h
+               (typecast (pointer TH3D) result))
+          (pmethod h sumw2))))
+      (;; Sparse
+       t
+       (setf result
+             (typecast
+              (pointer void)
+              (new THnSparseD
+                   (str "hist")
+                   (str "hist")
+                   ndims
+                   nbins
+                   low
+                   high)))
+       (cond
+         ((= n_count_vars 2)
+          (var (pointer THnSparseD) h
+               (typecast (pointer THnSparseD) result))
+          (pmethod h sumw2)))))
+    
     ;; Read histogram data:
     (for (var int chunk_index 0)
          ;; (< (* chunk_index data_buffer_size)
@@ -747,12 +771,12 @@ object being filled. (uniq hist) references the result histogram."
                                        get-bin
                                        xs)
                               (aref count 1))))))
-              ;; Cleanup
-              (delete memspace_maxdims)
-              (delete start)
-              (delete stride)
-              (delete cnt)
-              (delete blck))
+         ;; Cleanup
+         (delete memspace_maxdims)
+         (delete start)
+         (delete stride)
+         (delete cnt)
+         (delete blck))
     ;; Cleanup:
     (delete binspec_dataset_dims)
     (delete binspec_chunk_dims)
@@ -765,7 +789,7 @@ object being filled. (uniq hist) references the result histogram."
     (delete low)
     (delete high)
     (delete buffer)
-    
+
     ;; Return:
     (return result)))
 
@@ -1070,7 +1094,7 @@ object being filled. (uniq hist) references the result histogram."
   ;; NOTE: Something is broken in the chunk-write algorithm such that
   ;; only one chunk seems to be written.  Therefore, this setting is
   ;; not correct, and writing should happen all in one chunk.
-  ;; 
+  ;;
   ;; Default chunk size for Lisp
   ;; (setf chunk_size
   ;;       1000)
@@ -1144,7 +1168,7 @@ object being filled. (uniq hist) references the result histogram."
                   (* (sizeof double)
                      (+ i n_count_vars))
                   +H5T-NATIVE-DOUBLE+))
-  
+
   ;; Amount of data in histogram
   (var long npoints)
   (cond
@@ -1243,7 +1267,7 @@ object being filled. (uniq hist) references the result histogram."
           (var int y_index)
 
           ;; Set x,y indices:
-          
+
           (setf x_index
                 (+ (mod i
                         (pmethod h nbinsx))
@@ -1259,7 +1283,7 @@ object being filled. (uniq hist) references the result histogram."
                         get-bin
                         x_index
                         y_index))
-          
+
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
@@ -1290,7 +1314,7 @@ object being filled. (uniq hist) references the result histogram."
           (var int y_index)
           (var int z_index)
           ;; Set x,y,z indices:
-          
+
           (setf x_index
                 (+ (mod i
                         (pmethod h nbinsx))
@@ -1313,7 +1337,7 @@ object being filled. (uniq hist) references the result histogram."
                         x_index
                         y_index
                         z_index))
-          
+
           (setf (aref count 0)
                 (pmethod h
                          get-bin-content
