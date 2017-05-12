@@ -293,6 +293,35 @@ themselves as context."
 (shadowing-import 'cl-ana.makeres-table::find-push-fields)
 (shadowing-import 'cl-ana.makeres-table::replace-push-fields)
 
+(defun cpp-result-directory ()
+  (cpp-work-path "results/"))
+
+(defun cpp-result-path (id &optional subpath)
+  "Returns the path to the current log location for given cpp result
+target, or optionally a subpath formed by concatenating subpath to the
+cpp result target's log directory."
+  (let ((*print-pretty* nil))
+    (let ((id-path
+           (format nil "~s" id)))
+      (when (pathname-directory id-path)
+        (error "ID ~s yields illegal pathname" id))
+      (setf id-path
+            (make-pathname :directory (list :relative id-path)))
+      (when (and subpath
+                 (pathname-directory subpath))
+        (error "subpath ~s yields illegal path" subpath))
+      (let* ((id+sub-path
+              (if subpath
+                  (merge-pathnames subpath
+                                   (namestring id-path))
+                  (namestring id-path)))
+             (result
+              (namestring
+               (merge-pathnames id+sub-path
+                                (cpp-result-directory)))))
+        (ensure-directories-exist result)
+        result))))
+
 ;; must be given complete target graph, not just the null-stat targets
 (defun make-pass-target-expr (graph src pass)
   "Return expression for pass target over src, collapsing all results
@@ -510,11 +539,39 @@ from pass up to src."
                     ,@(loop
                          for r in pass
                          collect
-                           (replace-uniqsyms
-                            r
-                            (gethash r reduction->return))))))
+                           `(let* ((destdir
+                                    (cpp-result-path ',r))
+                                   (value
+                                    ,(replace-uniqsyms
+                                      r
+                                      (gethash r reduction->return)))
+                                   (type
+                                    (cl-ana.makeres::target-type
+                                     value))
+                                   (type-path
+                                    (format nil "~a/type"
+                                            destdir))
+                                   (object-path
+                                    (format nil "~a/data"
+                                            destdir)))
+                              (flet ((write-to-path (object path)
+                                       (with-open-file (file path
+                                                             :direction :output
+                                                             :if-does-not-exist :create
+                                                             :if-exists :supersede)
+                                         (format file "~s~%" object))))
+                                ;; Write type information
+                                (ensure-directories-exist type-path)
+                                (write-to-path
+                                 type
+                                 type-path)
+                                ;; Save object
+                                (ensure-directories-exist object-path)
+                                (save-object value
+                                             object-path))
+                              destdir)))))
                ;; Map from cpp-tab to ofields present in expression
-
+               
                ;; map from table to lfields for table:
                (cpp-tab->lfields
                 (gethash (project) *proj->cpp-tab->lfields*))
@@ -698,8 +755,26 @@ from pass up to src."
      for p in pass
      for i from 0
      do (setf (gethash p result-graph)
-              (make-target p `(elt (res ,id)
-                                   ,i)
+              (make-target p
+                           `(let* (;; Actual work
+                                   (type
+                                    (with-open-file
+                                        (file (cpp-result-path ',p
+                                                               "type")
+                                              :direction :input)
+                                      (read file)))
+                                   (value
+                                    (load-object type
+                                                 (cpp-result-path ',p
+                                                                  "data"))))
+                              ;; Hack to make a dependency
+                              '(res ,id)
+                              ;; Delete the information
+                              (sb-ext:delete-directory
+                               (cpp-result-path ',p)
+                               :recursive t)
+                              ;; Return the value
+                              value)
                            :val (target-val (gethash p result-graph))
                            :stat (target-stat (gethash p result-graph)))))
   nil)
