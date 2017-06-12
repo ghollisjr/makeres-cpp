@@ -38,6 +38,9 @@
 (defcpp get-event () "GetEvent")
 (defcpp Get () "Get")
 (defcpp GetObject () "GetObject")
+(defcpp power (x)
+  (format nil "TMath::Power(~a)"
+          (cpp x)))
 
 ;;; Histogram methods
 
@@ -96,6 +99,10 @@
 ;; macro for making this easier
 (defmacro with-root-header (&rest args)
   `(with-defheader ,@args :flags *root-flags*))
+
+;;;; Mathematics
+(defheader "TMath.h"
+    (power))
 
 ;;;; Axes
 (defheader "TAxis.h"
