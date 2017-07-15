@@ -262,6 +262,8 @@
   "SetXYZM")
 (defcpp set-xyzt ()
   "SetXYZT")
+(defcpp momentum-norm ()
+  "P")
 (defcpp vect ()
   "Vect")
 (defcpp unit ()
