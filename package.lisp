@@ -96,6 +96,9 @@
    ;; histograms
    :read_histogram
    :write_histogram
+   :write_histogram_float
+   :write-histogram-to-rootfile
+   :read-histogram-from-rootfile
    ;; lists
    :read_list
    ;; numbers

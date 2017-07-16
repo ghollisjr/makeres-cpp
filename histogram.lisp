@@ -593,7 +593,7 @@ object being filled. (uniq hist) references the result histogram."
           (var (pointer THnSparseD) h
                (typecast (pointer THnSparseD) result))
           (pmethod h sumw2)))))
-    
+
     ;; Read histogram data:
     (for (var int chunk_index 0)
          ;; (< (* chunk_index data_buffer_size)
@@ -1523,6 +1523,737 @@ object being filled. (uniq hist) references the result histogram."
   (delete[] xs)
   )
 
+;; Same as above but only for THXF types
+(defcppfun void write_histogram_float
+    ((var (pointer void) hist)
+     ;; May be able to remove in future
+     (var int ndims)
+     (var string filename)
+     (var (pointer string) field_names))
+  (var hid-t outfile
+       (H5Fcreate (method filename c-str)
+                  +H5F-ACC-TRUNC+
+                  +H5P-DEFAULT+
+                  +H5P-DEFAULT+))
+
+  (var bool cleanup_field_names
+       false)
+
+  ;; Compute or set field_names information
+  (var (pointer int) name_lengths
+       (new[] int ndims))
+  (var int max_name_length 0)
+  (if (= field_names 0)
+      (progn
+        (setf cleanup_field_names true)
+        (setf field_names
+              (new[] string ndims))
+        ;; setup field_names
+        (for (var int i 0) (< i ndims) (incf i)
+             (var stringstream ss)
+             (<< ss (str "x") (+ 1 i))
+             (setf (aref field_names i)
+                   (method ss stringstream.str)))))
+  (for (var int i 0) (< i ndims) (incf i)
+       (setf (aref name_lengths i)
+             (method (aref field_names i)
+                     length))
+       (if (> (aref name_lengths i)
+              max_name_length)
+           (setf max_name_length
+                 (aref name_lengths i))))
+
+  ;; compute nbins, low and high
+  (var (pointer long) nbins
+       (new[] long ndims))
+  (var (pointer double) low
+       (new[] double ndims))
+  (var (pointer double) high
+       (new[] double ndims))
+
+  (var (pointer (pointer TAxis)) axes
+       (new[] (pointer TAxis) ndims))
+
+  (cond
+    (;; 1-D
+     (= ndims 1)
+     (var (pointer TH1F) h
+          (typecast (pointer TH1F) hist))
+     (setf (aref axes 0)
+           (pmethod h x-axis)))
+    (;; 2-D
+     (= ndims 2)
+     (var (pointer TH2F) h
+          (typecast (pointer TH2F) hist))
+     (setf (aref axes 0)
+           (pmethod h x-axis))
+     (setf (aref axes 1)
+           (pmethod h y-axis)))
+    (;; 3-D
+     (= ndims 3)
+     (var (pointer TH3F) h
+          (typecast (pointer TH3F) hist))
+     (setf (aref axes 0)
+           (pmethod h x-axis))
+     (setf (aref axes 1)
+           (pmethod h y-axis))
+     (setf (aref axes 2)
+           (pmethod h z-axis)))
+    (;; Sparse
+     t
+     (var (pointer THnSparseF) h
+          (typecast (pointer THnSparseF) hist))
+     (for (var int dim 0) (< dim ndims) (incf dim)
+          (setf (aref axes dim)
+                (pmethod h get-axis
+                         dim)))))
+
+  (for (var int dim 0) (< dim ndims) (incf dim)
+       (setf (aref nbins dim)
+             (pmethod (aref axes dim)
+                      axis.nbins))
+       (setf (aref low dim)
+             (pmethod (aref axes dim)
+                      bin-low-edge
+                      1))
+       (setf (aref high dim)
+             (pmethod (aref axes dim)
+                      bin-up-edge
+                      (aref nbins dim))))
+
+  ;; chunk size (not same as Lisp default, writing all in one chunk)
+  (var int chunk_size
+       ndims)
+
+  ;; buffer size
+  (var long buffer_row_size
+       (+ max_name_length
+          (* 2
+             (sizeof int))
+          (* 2
+             (sizeof double))))
+  (var long buffer_size
+       (* buffer_row_size
+          chunk_size))
+
+  ;; buffer
+  (var (pointer char) buffer
+       (new[] char buffer_size))
+
+  ;; HDF5 type
+  (var hid-t binspec_datatype
+       (h5tcreate +H5T-COMPOUND+
+                  buffer_row_size))
+  (var (pointer hsize-t) name_type_dims
+       (new hsize-t))
+  (setf (value name_type_dims)
+        max_name_length)
+  (var hid-t name_type
+       (h5tarray-create2 +H5T-NATIVE-CHAR+
+                         1
+                         name_type_dims))
+  (h5tinsert binspec_datatype
+             (str "name")
+             0
+             name_type)
+  (h5tinsert binspec_datatype
+             (str "name-length")
+             max_name_length
+             +H5T-NATIVE-INT+)
+  (h5tinsert binspec_datatype
+             (str "nbins")
+             (+ max_name_length
+                (sizeof int))
+             +H5T-NATIVE-INT+)
+  (h5tinsert binspec_datatype
+             (str "low")
+             (+ max_name_length
+                (* 2 (sizeof int)))
+             +H5T-NATIVE-DOUBLE+)
+  (h5tinsert binspec_datatype
+             (str "high")
+             (+ max_name_length
+                (* 2 (sizeof int))
+                (sizeof double))
+             +H5T-NATIVE-DOUBLE+)
+
+  ;; Dataset
+  (var hid-t binspec_dataset)
+
+  (var (pointer hsize-t) binspec_chunkdims
+       (new hsize-t))
+  (setf (value binspec_chunkdims)
+        chunk_size)
+
+  (var (pointer hsize-t) binspec_dataset_dims
+       (new hsize-t))
+  (setf (value binspec_dataset_dims)
+        ndims)
+
+  (var (pointer hsize-t) binspec_dataset_maxdims
+       (new hsize-t))
+  (setf (value binspec_dataset_maxdims)
+        +H5S-UNLIMITED+)
+
+  (var hid-t cparms
+       (h5pcreate +H5P-DATASET-CREATE+))
+  (h5pset-chunk cparms 1 binspec_chunkdims)
+
+  (var hid-t binspec_dataspace
+       (h5screate-simple 1
+                         binspec_dataset_dims
+                         binspec_dataset_maxdims))
+
+  (h5gclose
+   (h5gcreate1 outfile (str "/histogram") 0))
+
+  (setf binspec_dataset
+        (h5dcreate1 outfile
+                    (str "/histogram/bin-specs")
+                    binspec_datatype
+                    binspec_dataspace
+                    cparms))
+
+  (h5sclose binspec_dataspace)
+
+  (var (pointer hsize-t) start
+       (new hsize-t))
+
+  (var (pointer hsize-t) stride
+       (new hsize-t))
+
+  (var (pointer hsize-t) cnt
+       (new hsize-t))
+
+  (var (pointer hsize-t) blck
+       (new hsize-t))
+
+  ;; Write bin-specs to file
+  (for (var int i 0) (< i ndims) (incf i)
+       (var int buffer_index
+            (* i
+               buffer_row_size))
+
+       ;; name
+       (for (var int j 0)
+            (< j (method (aref field_names i) length))
+            (incf j)
+            (setf (aref buffer (+ buffer_index
+                                  j))
+                  (aref (aref field_names i)
+                        j)))
+
+       ;; name-length
+       (setf (value
+              (typecast (pointer int)
+                        (+ buffer
+                           buffer_index
+                           (h5tget-member-offset binspec_datatype
+                                                 1))))
+             (method (aref field_names i) length))
+
+       ;; nbins
+       (setf (value
+              (typecast (pointer int)
+                        (+ buffer
+                           buffer_index
+                           (h5tget-member-offset binspec_datatype
+                                                 2))))
+             (aref nbins i))
+
+       ;; low
+       (setf (value
+              (typecast (pointer double)
+                        (+ buffer
+                           buffer_index
+                           (h5tget-member-offset binspec_datatype
+                                                 3))))
+             (aref low i))
+
+       ;; high
+       (setf (value
+              (typecast (pointer double)
+                        (+ buffer
+                           buffer_index
+                           (h5tget-member-offset binspec_datatype
+                                                 4))))
+             (aref high i)))
+
+  (setf binspec_dataspace
+        (h5dget-space binspec_dataset))
+
+  (setf (value start) 0)
+  (setf (value stride) 1)
+  (setf (value cnt) 1)
+  (setf (value blck) chunk_size)
+
+  ;; memspace variables
+  (var hid-t memspace)
+
+  (var (pointer hsize-t) memspace_dims
+       (new hsize-t))
+  (setf (value memspace_dims)
+        chunk_size)
+
+  (var (pointer hsize-t) memspace_maxdims
+       (new hsize-t))
+  (setf (value memspace_maxdims)
+        chunk_size)
+
+  (setf memspace
+        (h5screate-simple 1 memspace_dims memspace_maxdims))
+
+  (h5sselect-hyperslab binspec_dataspace
+                       :H5S-SELECT-SET
+                       start stride cnt blck)
+  (h5dwrite binspec_dataset
+            binspec_datatype
+            memspace
+            binspec_dataspace
+            +H5P-DEFAULT+
+            buffer)
+  (h5sclose memspace)
+  (h5sclose binspec_dataspace)
+  (h5dclose binspec_dataset)
+  (delete[] buffer)
+
+  ;; Histogram data output
+  (var hid-t data_dataset)
+  (var hid-t data_dataspace)
+
+
+  ;; NOTE: Something is broken in the chunk-write algorithm such that
+  ;; only one chunk seems to be written.  Therefore, this setting is
+  ;; not correct, and writing should happen all in one chunk.
+  ;;
+  ;; Default chunk size for Lisp
+  ;; (setf chunk_size
+  ;;       1000)
+
+  ;; Calculate chunk size:
+
+  ;; Total number of events written
+  (var long row 0)
+
+  (var (pointer hsize-t) data_dataset_dims
+       (new hsize-t))
+  (setf (value data_dataset_dims)
+        0)
+
+  (var (pointer hsize-t) data_dataset_maxdims
+       (new hsize-t))
+  (setf (value data_dataset_maxdims)
+        +H5S-UNLIMITED+)
+
+  ;; Number of count fields:
+  (var int n_count_vars)
+  (cond
+    (;; TH1F
+     (= ndims 1)
+     (var (pointer TH1F) h
+          (typecast (pointer TH1F) hist))
+     (if (= 0 (pmethod h get-sumw2-n))
+         (setf n_count_vars 1)
+         (setf n_count_vars 2)))
+    (;; TH2F
+     (= ndims 2)
+     (var (pointer TH2F) h
+          (typecast (pointer TH2F) hist))
+     (if (= 0 (pmethod h get-sumw2-n))
+         (setf n_count_vars 1)
+         (setf n_count_vars 2)))
+    (;; TH3F
+     (= ndims 3)
+     (var (pointer TH3F) h
+          (typecast (pointer TH3F) hist))
+     (if (= 0 (pmethod h get-sumw2-n))
+         (setf n_count_vars 1)
+         (setf n_count_vars 2)))
+    (;; Sparse
+     t
+     (var (pointer THnSparseF) h
+          (typecast (pointer THnSparseF) hist))
+     (if (pmethod h get-calculate-errors)
+         (setf n_count_vars 2)
+         (setf n_count_vars 1))))
+
+  ;; Datatype size
+  (var long data_row_size
+       (* (sizeof double)
+          (+ ndims
+             n_count_vars)))
+
+  ;;; Datatype
+  (var hid-t data_datatype
+       (h5tcreate +H5T-COMPOUND+
+                  data_row_size))
+  ;; insert members
+  (h5tinsert data_datatype (str "count") 0 +H5T-NATIVE-DOUBLE+)
+  (if (= n_count_vars 2)
+      (h5tinsert data_datatype (str "count-error") (sizeof double)
+                 +H5T-NATIVE-DOUBLE+))
+  (for (var int i 0) (< i ndims) (incf i)
+       (h5tinsert data_datatype
+                  (method (aref field_names i)
+                          c-str)
+                  (* (sizeof double)
+                     (+ i n_count_vars))
+                  +H5T-NATIVE-DOUBLE+))
+
+  ;; Amount of data in histogram
+  (var long npoints)
+  (cond
+    (;; TH1F
+     (= ndims 1)
+     (var (pointer TH1F) h
+          (typecast (pointer TH1F) hist))
+     (setf npoints
+           (pmethod h nbinsx)))
+    (;; TH2F
+     (= ndims 2)
+     (var (pointer TH2F) h
+          (typecast (pointer TH2F) hist))
+     (setf npoints
+           (* (pmethod h nbinsx)
+              (pmethod h nbinsy))))
+    (;; TH3F
+     (= ndims 3)
+     (var (pointer TH3F) h
+          (typecast (pointer TH3F) hist))
+     (setf npoints
+           (* (pmethod h nbinsx)
+              (pmethod h nbinsy)
+              (pmethod h nbinsz))))
+    (;; Sparse
+     t
+     (var (pointer THnSparseF) h
+          (typecast (pointer THnSparseF) hist))
+     (setf npoints
+           (pmethod h axis.nbins))))
+  ;; Create dataset
+  (if (= npoints 0)
+      (setf chunk_size 1)
+      (setf chunk_size npoints))
+  (setf data_dataspace
+        (h5screate-simple 1
+                          data_dataset_dims
+                          data_dataset_maxdims))
+  (setf cparms
+        (h5pcreate +H5P-DATASET-CREATE+))
+  (var (pointer hsize-t) data_chunk_dims
+       (new hsize-t))
+  (setf (value data_chunk_dims)
+        chunk_size)
+  (h5pset-chunk cparms 1 data_chunk_dims)
+  (setf data_dataset
+        (h5dcreate1 outfile
+                    (str "/histogram/data")
+                    data_datatype
+                    data_dataspace
+                    cparms))
+  (h5sclose data_dataspace)
+  ;; Setup buffer
+  (setf buffer
+        (new[] char (* data_row_size
+                       chunk_size)))
+
+  (var (pointer double) count
+       (new[] double n_count_vars))
+  (var (pointer double) xs
+       (new[] double ndims))
+  ;; Row index
+  (setf row 0)
+
+  ;; Chunk index
+  (var int chunk_index -1)
+
+  (for (var int i 0) (< i npoints) (incf i)
+       ;; Set count and xs for each type of histogram
+       (cond
+         (;; TH1F
+          (= ndims 1)
+          (var (pointer TH1F) h
+               (typecast (pointer TH1F) hist))
+          (setf (aref count 0)
+                (pmethod h
+                         get-bin-content
+                         (+ i 1)))
+          (if (= n_count_vars 2)
+              (setf (aref count 1)
+                    (pmethod h
+                             bin-error
+                             (+ i 1))))
+          (setf (aref xs 0)
+                (pmethod h
+                         get-bin-center
+                         (+ i 1))))
+         ;; 2-D and 3-D histograms are broken due to i not being a
+         ;; useful global index via the standard ROOT functions, so I
+         ;; have to add special cases for them.
+         (;; TH2F
+          (= ndims 2)
+          (var (pointer TH2F) h
+               (typecast (pointer TH2F) hist))
+          (var int x_index)
+          (var int y_index)
+
+          ;; Set x,y indices:
+
+          (setf x_index
+                (+ (mod i
+                        (pmethod h nbinsx))
+                   1))
+          (setf y_index
+                (+ (/ i
+                      (pmethod h nbinsx))
+                   1))
+
+          ;; Set global index:
+          (var int globindex
+               (pmethod h
+                        get-bin
+                        x_index
+                        y_index))
+
+          (setf (aref count 0)
+                (pmethod h
+                         get-bin-content
+                         globindex))
+          (if (= n_count_vars 2)
+              (setf (aref count 1)
+                    (pmethod h
+                             bin-error
+                             globindex)))
+          (var (pointer TAxis) xaxis
+               (pmethod h x-axis))
+          (var (pointer TAxis) yaxis
+               (pmethod h y-axis))
+
+          (setf (aref xs 0)
+                (pmethod xaxis
+                         get-bin-center
+                         x_index))
+          (setf (aref xs 1)
+                (pmethod yaxis
+                         get-bin-center
+                         y_index)))
+         (;; TH3F
+          (= ndims 3)
+          (var (pointer TH3F) h
+               (typecast (pointer TH3F) hist))
+          (var int x_index)
+          (var int y_index)
+          (var int z_index)
+          ;; Set x,y,z indices:
+
+          (setf x_index
+                (+ (mod i
+                        (pmethod h nbinsx))
+                   1))
+          (setf y_index
+                (+ (mod (/ i
+                           (pmethod h nbinsx))
+                        (pmethod h nbinsy))
+                   1))
+          (setf z_index
+                (+ (/ i
+                      (* (pmethod h nbinsx)
+                         (pmethod h nbinsy)))
+                   1))
+
+          ;; Set global index:
+          (var int globindex
+               (pmethod h
+                        get-bin
+                        x_index
+                        y_index
+                        z_index))
+
+          (setf (aref count 0)
+                (pmethod h
+                         get-bin-content
+                         globindex))
+          (if (= n_count_vars 2)
+              (setf (aref count 1)
+                    (pmethod h
+                             bin-error
+                             globindex)))
+          (var (pointer TAxis) xaxis
+               (pmethod h x-axis))
+          (var (pointer TAxis) yaxis
+               (pmethod h y-axis))
+          (var (pointer TAxis) zaxis
+               (pmethod h z-axis))
+
+          (setf (aref xs 0)
+                (pmethod xaxis
+                         get-bin-center
+                         x_index))
+          (setf (aref xs 1)
+                (pmethod yaxis
+                         get-bin-center
+                         y_index))
+          (setf (aref xs 2)
+                (pmethod zaxis
+                         get-bin-center
+                         z_index)))
+         (;; Sparse
+          t
+          (var (pointer THnSparseF) h
+               (typecast (pointer THnSparseF) hist))
+          (setf (aref count 0)
+                (pmethod h
+                         get-bin-content
+                         i))
+          (if (= n_count_vars 2)
+              (setf (aref count 1)
+                    (sqrt
+                     (pmethod h
+                              get-bin-error2
+                              (+ i 1)))))
+          (var (pointer int) indices
+               (new[] int ndims))
+          (pmethod h get-bin-content
+                   i
+                   indices)
+          (for (var int axis_index 0) (< axis_index ndims) (incf axis_index)
+               (var (pointer TAxis) axis
+                    (pmethod h get-axis axis_index))
+               (setf (aref xs axis_index)
+                     (pmethod axis get-bin-center
+                              (aref indices axis_index))))
+          (delete[] indices)))
+       ;; Fill buffer whenever count or error are not zero
+       (var long buf_index
+            (* (mod row chunk_size)
+               (+ n_count_vars ndims)))
+
+       (var (pointer double) buf
+            (typecast (pointer double) buffer))
+       (var bool fill_p false)
+       (if (not (= 0
+                   (aref count 0)))
+           (setf fill_p true))
+       (if (= n_count_vars 2)
+           (if (not (= 0
+                       (aref count 1)))
+               (setf fill_p true)))
+       (if fill_p
+           (progn
+             (setf (aref buf buf_index)
+                   (aref count 0))
+             (if (= n_count_vars 2)
+                 (setf (aref buf (+ 1 buf_index))
+                       (aref count 1)))
+             (for (var int j 0) (< j ndims) (incf j)
+                  (setf (aref buf (+ buf_index j n_count_vars))
+                        (aref xs j)))
+             (incf row)))
+       ;; When buffer full, write chunk to dataset
+       (if (and (not (= row 0))
+                (= 0 (mod row chunk_size)))
+           (progn
+             (incf chunk_index)
+             (setf (value data_dataset_dims)
+                   (+ (value data_dataset_dims)
+                      chunk_size))
+             (h5dset-extent data_dataset
+                            data_dataset_dims)
+             (setf data_dataspace
+                   (h5dget-space data_dataset))
+             (setf (value memspace_dims)
+                   chunk_size)
+             (setf (value memspace_maxdims)
+                   chunk_size)
+
+             (setf memspace
+                   (h5screate-simple 1 memspace_dims memspace_maxdims))
+
+             (setf (value start) (* chunk_size
+                                    chunk_index))
+             (setf (value stride) 1)
+             (setf (value cnt) 1)
+             (setf (value blck) chunk_size)
+
+             (h5sselect-hyperslab data_dataspace
+                                  :H5S-SELECT-SET
+                                  start stride cnt blck)
+             (h5dwrite data_dataset
+                       data_datatype
+                       memspace
+                       data_dataspace
+                       +H5P-DEFAULT+
+                       buffer)
+             (h5sclose memspace)
+             (h5sclose data_dataspace))))
+  ;; Final write if events don't match buffer size
+  (if (not (= 0
+              (mod row chunk_size)))
+      (progn
+        (incf chunk_index)
+        (var long final_chunk_size
+             (mod row chunk_size))
+        (setf (value data_dataset_dims)
+              (+ (value data_dataset_dims)
+                 final_chunk_size))
+        (h5dset-extent data_dataset
+                       data_dataset_dims)
+        (setf data_dataspace
+              (h5dget-space data_dataset))
+        (setf (value memspace_dims)
+              final_chunk_size)
+        (setf (value memspace_maxdims)
+              final_chunk_size)
+
+        (setf memspace
+              (h5screate-simple 1 memspace_dims memspace_maxdims))
+
+        (setf (value start) (* chunk_size
+                               chunk_index))
+
+        (setf (value stride) 1)
+        (setf (value cnt) 1)
+        (setf (value blck) final_chunk_size)
+
+        (h5sselect-hyperslab data_dataspace
+                             :H5S-SELECT-SET
+                             start stride cnt blck)
+        (h5dwrite data_dataset
+                  data_datatype
+                  memspace
+                  data_dataspace
+                  +H5P-DEFAULT+
+                  buffer)
+        (h5sclose memspace)
+        (h5sclose data_dataspace)))
+  ;; Cleanup
+  (h5fclose outfile)
+  ;; Cleanup memory:
+  (delete[] name_lengths)
+  (if cleanup_field_names
+      (delete[] field_names))
+  (delete[] nbins)
+  (delete[] low)
+  (delete[] high)
+  (delete[] axes)
+  (delete[] buffer)
+  (delete name_type_dims)
+  (delete binspec_chunkdims)
+  (delete binspec_dataset_dims)
+  (delete binspec_dataset_maxdims)
+  (delete start)
+  (delete stride)
+  (delete cnt)
+  (delete blck)
+  (delete memspace_dims)
+  (delete memspace_maxdims)
+  (delete data_dataset_dims)
+  (delete data_dataset_maxdims)
+  (delete data_chunk_dims)
+  (delete[] count)
+  (delete[] xs)
+  )
+
 ;; C++ conversion methods
 
 (defmethod cpp-loader ((obj sparse-histogram))
@@ -1530,3 +2261,165 @@ object being filled. (uniq hist) references the result histogram."
 
 (defmethod cpp-loader ((obj contiguous-histogram))
   'read_histogram)
+
+;; Writing a histogram into a ROOT file
+(defgeneric write-histogram-to-rootfile (hist pathname)
+  (:documentation "Writes a histogram to a root file."))
+
+;; General method for sparse and contiguous histograms:
+(defmethod write-histogram-to-rootfile
+    (hist pathname)
+  (let* ((ndims (hist-ndims hist))
+         (histpath (cpp-work-path "write-histogram/hist.h5"))
+         (type-symbol
+          (case ndims
+            (1 'TH1D)
+            (2 'TH2D)
+            (3 'TH3D)
+            (otherwise 'THnSparseD)))
+         (body
+          `((function int main ()
+                      (var string outfilename
+                           (str ,pathname))
+                      (var string infilename
+                           (str ,histpath))
+                      (varcons TFile outfile
+                               (str ,pathname)
+                               (str "RECREATE"))
+                      (var (pointer ,type-symbol) h
+                           (typecast (pointer ,type-symbol)
+                                     (read_histogram infilename)))
+                      (pmethod h write)
+                      (method outfile root-close)
+                      (return 0)))))
+    (save-object hist histpath)
+    (exe-fn (cpp-work-path "write-histogram/exe")
+            body
+            :output *standard-output*)
+    ;; cleanup:
+    (delete-file (cpp-work-path "write-histogram/exe"))
+    (delete-file (cpp-work-path "write-histogram/exe.cc"))
+    (delete-file histpath)
+    pathname))
+
+;; Returns a THXD histogram given a THXF histogram
+(defun read-histogram-from-rootfile (pathname histname axis-names)
+  "This function utilizes the TKey framework to investigate the type
+information of histograms in a ROOT file.  MAKE SURE AXIS-NAMES
+EXACTLY MATCHES THE HISTOGRAM IN QUESTION.
+
+Set float-p to non-NIL if you want to read a floating point
+histogram."
+  (let* ((histpath (cpp-work-path "rhfr/hist.h5"))
+         result)
+    (exe-fn (cpp-work-path "rhfr/exe")
+            `((function int main ()
+                        ;; Open file and get typename
+                        (var string infilename (str ,pathname))
+                        (varcons tfile infile
+                                 (method infilename c-str)
+                                 (str "READ"))
+                        (var (pointer tkey) tk
+                             (method infile get-key
+                                     (str ,histname)))
+                        (var string tn
+                             (pmethod tk get-class-name))
+
+                        ;; Read histogram:
+                        (var (pointer void) h)
+                        (method infile GetObject
+                                (str ,histname)
+                                h)
+
+                        ;; Switch on the type name:
+                        (cond
+                          ((= tn (str "TH1D"))
+                           (var (const int) ndims 1)
+                           (vararray string fieldnames
+                                     (ndims)
+                                     (str ,(first axis-names)))
+                           (write_histogram h
+                                            ndims
+                                            (str ,histpath)
+                                            fieldnames))
+                          ((= tn (str "TH1F"))
+                           (var (const int) ndims 1)
+                           (vararray string fieldnames
+                                     (ndims)
+                                     (str ,(first axis-names)))
+                           (write_histogram_float h
+                                                  ndims
+                                                  (str ,histpath)
+                                                  fieldnames))
+                          ((= tn (str "TH2D"))
+                           (var (const int) ndims 2)
+                           (vararray string fieldnames
+                                     (ndims)
+                                     (str ,(first axis-names))
+                                     (str ,(second axis-names)))
+                           (write_histogram h
+                                            ndims
+                                            (str ,histpath)
+                                            fieldnames))
+                          ((= tn (str "TH2F"))
+                           (var (const int) ndims 2)
+                           (vararray string fieldnames
+                                     (ndims)
+                                     (str ,(first axis-names))
+                                     (str ,(second axis-names)))
+                           (write_histogram_float h
+                                                  ndims
+                                                  (str ,histpath)
+                                                  fieldnames))
+                          ((= tn (str "TH3D"))
+                           (var (const int) ndims 3)
+                           (vararray string fieldnames
+                                     (ndims)
+                                     (str ,(first axis-names))
+                                     (str ,(second axis-names))
+                                     (str ,(third axis-names)))
+                           (write_histogram h
+                                            ndims
+                                            (str ,histpath)
+                                            fieldnames))
+                          ((= tn (str "TH3F"))
+                           (var (const int) ndims 3)
+                           (vararray string fieldnames
+                                     (ndims)
+                                     (str ,(first axis-names))
+                                     (str ,(second axis-names))
+                                     (str ,(third axis-names)))
+                           (write_histogram_float h
+                                                  ndims
+                                                  (str ,histpath)
+                                                  fieldnames))
+                          ((= tn (str "THnSparseT<TArrayD>"))
+                           (var (const int) ndims ,(length axis-names))
+                           (vararray string fieldnames
+                                     (ndims)
+                                     ,@(loop
+                                          for a in axis-names
+                                          collecting
+                                            `(str ,a)))
+                           (write_histogram h
+                                            ndims
+                                            (str ,histpath)
+                                            fieldnames))
+                          ((= tn (str "THnSparseT<TArrayF>"))
+                           (var (const int) ndims ,(length axis-names))
+                           (vararray string fieldnames
+                                     (ndims)
+                                     ,@(loop
+                                          for a in axis-names
+                                          collecting
+                                            `(str ,a)))
+                           (write_histogram_float h
+                                                  ndims
+                                                  (str ,histpath)
+                                                  fieldnames)))
+                        (return 0)))
+            :output *standard-output*)
+    (setf result (load-object 'sparse-histogram
+                              histpath))
+    ;; cleanup after debugging
+    result))

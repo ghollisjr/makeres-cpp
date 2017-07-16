@@ -22,8 +22,9 @@
 (in-package :makeres-cpp)
 
 (defun root2hdf (name root-file-path hdf-file-path)
-  "Converts a ROOT file located at root-file-path to an HDF5 file
-located at hdf-file-path with root2hdf script"
+  "Converts a ROOT file with a TTree located at root-file-path to an
+HDF5 file containing the TTree information located at hdf-file-path
+with root2hdf script"
   (let* ((tmp-path
           (cut-newline (sh mktemp
                            "-d" "-p" ".")))

@@ -198,7 +198,16 @@
   ((defcpp tfile ()
      "TFile")
    (defcpp root-open ()
-     "Open")))
+     "Open")
+   (defcpp get-key ()
+     "GetKey")))
+
+;;; and TKey for working with TFiles:
+(with-root-header "TKey.h"
+  ((defcpp tkey ()
+     "TKey")
+   (defcpp get-class-name ()
+     "GetClassName")))
 
 ;;;; TCanvas
 (with-root-header "TCanvas.h"
