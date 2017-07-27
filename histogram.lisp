@@ -23,8 +23,9 @@
 
 ;; C++ histogram definition operator
 
+;; OLD:
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun replace-hins (ndims body)
+  (defun replace-hins-old (ndims body)
     (cond
       ((null body)
        nil)
@@ -45,12 +46,63 @@
                             (uniq xs)
                             ,@(when (> (length rest-body) ndims)
                                 `(,@(last rest-body)))))))
-           (mapcar (lambda (x) (replace-hins ndims x))
+           (mapcar (lambda (x) (replace-hins-old ndims x))
                    body)))
       ((atom body)
        body))))
 
-(defmacro defcpphist (id src bin-specs inits &body body)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun replace-hins (body)
+    (cond
+      ((null body)
+       nil)
+      ((listp body)
+       (if (eq (first body)
+               'hins)
+           (let ((rest-body (rest body)))
+             `(cond
+                ((= (uniq ndims) 1)
+                 (pmethod (typecast (pointer TH1D)
+                                    (uniq hist))
+                          fill ,@(subseq (rest body)
+                                         0 (min 2
+                                                (length (rest body))))))
+                ((= (uniq ndims) 2)
+                 (pmethod (typecast (pointer TH2D)
+                                    (uniq hist))
+                          fill ,@(subseq (rest body)
+                                         0 (min 3
+                                                (length (rest body))))))
+                ((= (uniq ndims) 3)
+                 (pmethod (typecast (pointer TH3D)
+                                    (uniq hist))
+                          fill ,@(subseq (rest body)
+                                         0 (min 4
+                                                (length (rest body))))))
+                (t
+                 (var double (uniq weight) 1d0)
+                 (when (< (uniq ndims) ,(length rest-body))
+                   (setf (uniq weight) ,@(last rest-body)))
+                 ,@(loop
+                      for dim below (- (length rest-body) 1)
+                      for form in (butlast rest-body)
+                      collecting
+                        `(setf (aref (uniq xs) ,dim)
+                               ,form))
+                 (when (not (< (uniq ndims) ,(length rest-body)))
+                   (setf (uniq weight)
+                         ,(first (last rest-body))))
+                 (pmethod (typecast (pointer THnSparseD)
+                                    (uniq hist))
+                          fill
+                          (uniq xs)
+                          (uniq weight)))))
+           (mapcar (lambda (x) (replace-hins x))
+                   body)))
+      ((atom body)
+       body))))
+
+(defmacro defcpphist-old (id src bin-specs inits &body body)
   "Defines a cpp-dotab target resulting in a C++ histogram.  Provides
 the following operators for use in the body: hins supplies any
 operators given to it to the Fill method applied to the histogram
@@ -156,9 +208,9 @@ object being filled. (uniq hist) references the result histogram."
                                (cpp-work-path (uniq hist-file)))))
              (delete-file (cpp-work-path (uniq hist-file)))
              result)
-         ,@(replace-hins ndims body)))))
+         ,@(replace-hins-old ndims body)))))
 
-(defmacro defcpphist-uniq (id src bin-specs inits &body body)
+(defmacro defcpphist-uniq-old (id src bin-specs inits &body body)
   "Defines a cpp-dotab target resulting in a C++ histogram.  Provides
 the following operators for use in the body: hins supplies any
 operators given to it to the Fill method applied to the histogram
@@ -264,7 +316,267 @@ object being filled. (uniq hist) references the result histogram."
                                (cpp-work-path (uniq hist-file)))))
              (delete-file (cpp-work-path (uniq hist-file)))
              result)
-         ,@(replace-hins ndims body)))))
+         ,@(replace-hins-old ndims body)))))
+
+;; Add support for histogram binning specifications as Lisp objects:
+(defcpp vardimspecs (name dimspecs)
+  (let* ((dimspecs (eval dimspecs))
+         (ndims (length dimspecs)))
+    (with-output-to-string (s)
+      (format s
+              "std::vector<std::vector<double> > ~a = {"
+              (cpp name))
+      (loop
+         for dimspec in dimspecs
+         for i from 1
+         do
+           (format s "{")
+           (format s "~{~a~^,~}"
+                   (list (cpp (getf dimspec :nbins))
+                         (cpp (getf dimspec :low))
+                         (cpp (getf dimspec :high))))
+           (format s "}")
+           (when (< i ndims)
+             (format s ",")))
+      (format s "}"))))
+
+(defcpp vardimspecnames (name dimspecs)
+  (let* ((dimspecs (eval dimspecs))
+         (ndims (length dimspecs)))
+    (with-output-to-string (s)
+      (format s
+              "std::string ~a[] = {"
+              (cpp name))
+      (loop
+         for dimspec in dimspecs
+         for i from 1
+         do
+           (format s "\"~a\""
+                   (cpp (getf dimspec :name)))
+           (when (< i ndims)
+             (format s ",")))
+      (format s "}"))))
+
+(defmacro defcpphist (id src bin-specs inits &body body)
+  "Defines a do-cpptab target resulting in a C++ histogram.  Provides
+the following operators for use in the body: hins supplies any
+operators given to it to the Fill method applied to the histogram
+object being filled. (uniq hist) references the result histogram."
+  `(defres ,id
+     (cpp-dotab ,src
+         ,(append
+           `((vardimspecs (uniq dimspecs) ,bin-specs)
+             (vardimspecnames (uniq names) ,bin-specs)
+             (var (const int) (uniq ndims)
+                  (method (uniq dimspecs) size))
+             (var (pointer void) (uniq hist))
+             (vararray double (uniq xs) ((uniq ndims)))
+             (cond
+               ((= (uniq ndims) 1)
+                (setf (uniq hist)
+                      (typecast (pointer void)
+                                (new TH1D
+                                     (str (uniq hist))
+                                     (str (uniq hist))
+                                     (aref (uniq dimspecs) 0 0)
+                                     (aref (uniq dimspecs) 0 1)
+                                     (aref (uniq dimspecs) 0 2)))))
+               ((= (uniq ndims) 2)
+                (setf (uniq hist)
+                      (typecast (pointer void)
+                                (new TH2D
+                                     (str (uniq hist))
+                                     (str (uniq hist))
+                                     (aref (uniq dimspecs) 0 0)
+                                     (aref (uniq dimspecs) 0 1)
+                                     (aref (uniq dimspecs) 0 2)
+                                     (aref (uniq dimspecs) 1 0)
+                                     (aref (uniq dimspecs) 1 1)
+                                     (aref (uniq dimspecs) 1 2)))))
+               ((= (uniq ndims) 3)
+                (setf (uniq hist)
+                      (typecast (pointer void)
+                                (new TH3D
+                                     (str (uniq hist))
+                                     (str (uniq hist))
+                                     (aref (uniq dimspecs) 0 0)
+                                     (aref (uniq dimspecs) 0 1)
+                                     (aref (uniq dimspecs) 0 2)
+                                     (aref (uniq dimspecs) 1 0)
+                                     (aref (uniq dimspecs) 1 1)
+                                     (aref (uniq dimspecs) 1 2)
+                                     (aref (uniq dimspecs) 2 0)
+                                     (aref (uniq dimspecs) 2 1)
+                                     (aref (uniq dimspecs) 2 2)))))
+               (t
+                (vararray int (uniq nbins) ((uniq ndims)))
+                (for (var int (uniq i) 0)
+                     (< (uniq i) (uniq ndims))
+                     (incf (uniq i))
+                     (setf (aref (uniq nbins) (uniq i))
+                           (aref (uniq dimspecs) (uniq i) 0)))
+
+                (vararray double (uniq low) ((uniq ndims)))
+                (for (var int (uniq i) 0)
+                     (< (uniq i) (uniq ndims))
+                     (incf (uniq i))
+                     (setf (aref (uniq low) (uniq i))
+                           (aref (uniq dimspecs) (uniq i) 1)))
+
+                (vararray double (uniq high) ((uniq ndims)))
+                (for (var int (uniq i) 0)
+                     (< (uniq i) (uniq ndims))
+                     (incf (uniq i))
+                     (setf (aref (uniq high) (uniq i))
+                           (aref (uniq dimspecs) (uniq i) 2)))
+
+                (setf (uniq hist)
+                      (typecast (pointer void)
+                                (new THnSparseD
+                                     (str (uniq hist))
+                                     (str (uniq hist))
+                                     (uniq ndims)
+                                     (uniq nbins)
+                                     (uniq low)
+                                     (uniq high)))))))
+           inits
+           `((cond
+               ((= (uniq ndims) 1)
+                (pmethod (typecast (pointer TH1D)
+                                   (uniq hist))
+                         sumw2))
+               ((= (uniq ndims) 2)
+                (pmethod (typecast (pointer TH2D)
+                                   (uniq hist))
+                         sumw2))
+               ((= (uniq ndims) 3)
+                (pmethod (typecast (pointer TH3D)
+                                   (uniq hist))
+                         sumw2))
+               (t
+                (pmethod (typecast (pointer THnSparseD)
+                                   (uniq hist))
+                         sumw2)))))
+         ((write_histogram (uniq hist)
+                           (uniq ndims)
+                           (str (eval (cpp-work-path (uniq hist-file))))
+                           (uniq names)))
+         (let ((result
+                (load-object 'sparse-histogram
+                             (cpp-work-path (uniq hist-file)))))
+           (delete-file (cpp-work-path (uniq hist-file)))
+           result)
+       ,@(replace-hins body))))
+
+(defmacro defcpphist-uniq (id src bin-specs inits &body body)
+  "Defines a do-cpptab target resulting in a C++ histogram.  Provides
+the following operators for use in the body: hins supplies any
+operators given to it to the Fill method applied to the histogram
+object being filled. (uniq hist) references the result histogram."
+  `(defres-uniq ,id
+     (cpp-dotab ,src
+         ,(append
+           `((vardimspecs (uniq dimspecs) ,bin-specs)
+             (vardimspecnames (uniq names) ,bin-specs)
+             (var (const int) (uniq ndims)
+                  (method (uniq dimspecs) size))
+             (var (pointer void) (uniq hist))
+             (vararray double (uniq xs) ((uniq ndims)))
+             (cond
+               ((= (uniq ndims) 1)
+                (setf (uniq hist)
+                      (typecast (pointer void)
+                                (new TH1D
+                                     (str (uniq hist))
+                                     (str (uniq hist))
+                                     (aref (uniq dimspecs) 0 0)
+                                     (aref (uniq dimspecs) 0 1)
+                                     (aref (uniq dimspecs) 0 2)))))
+               ((= (uniq ndims) 2)
+                (setf (uniq hist)
+                      (typecast (pointer void)
+                                (new TH2D
+                                     (str (uniq hist))
+                                     (str (uniq hist))
+                                     (aref (uniq dimspecs) 0 0)
+                                     (aref (uniq dimspecs) 0 1)
+                                     (aref (uniq dimspecs) 0 2)
+                                     (aref (uniq dimspecs) 1 0)
+                                     (aref (uniq dimspecs) 1 1)
+                                     (aref (uniq dimspecs) 1 2)))))
+               ((= (uniq ndims) 3)
+                (setf (uniq hist)
+                      (typecast (pointer void)
+                                (new TH3D
+                                     (str (uniq hist))
+                                     (str (uniq hist))
+                                     (aref (uniq dimspecs) 0 0)
+                                     (aref (uniq dimspecs) 0 1)
+                                     (aref (uniq dimspecs) 0 2)
+                                     (aref (uniq dimspecs) 1 0)
+                                     (aref (uniq dimspecs) 1 1)
+                                     (aref (uniq dimspecs) 1 2)
+                                     (aref (uniq dimspecs) 2 0)
+                                     (aref (uniq dimspecs) 2 1)
+                                     (aref (uniq dimspecs) 2 2)))))
+               (t
+                (vararray int (uniq nbins) ((uniq ndims)))
+                (for (var int (uniq i) 0)
+                     (< (uniq i) (uniq ndims))
+                     (incf (uniq i))
+                     (setf (aref (uniq nbins) (uniq i))
+                           (aref (uniq dimspecs) (uniq i) 0)))
+
+                (vararray double (uniq low) ((uniq ndims)))
+                (for (var int (uniq i) 0)
+                     (< (uniq i) (uniq ndims))
+                     (incf (uniq i))
+                     (setf (aref (uniq low) (uniq i))
+                           (aref (uniq dimspecs) (uniq i) 1)))
+
+                (vararray double (uniq high) ((uniq ndims)))
+                (for (var int (uniq i) 0)
+                     (< (uniq i) (uniq ndims))
+                     (incf (uniq i))
+                     (setf (aref (uniq high) (uniq i))
+                           (aref (uniq dimspecs) (uniq i) 2)))
+                (setf (uniq hist)
+                      (typecast (pointer void)
+                                (new THnSparseD
+                                     (str (uniq hist))
+                                     (str (uniq hist))
+                                     (uniq ndims)
+                                     (uniq nbins)
+                                     (uniq low)
+                                     (uniq high)))))))
+           inits
+           `((cond
+               ((= (uniq ndims) 1)
+                (pmethod (typecast (pointer TH1D)
+                                   (uniq hist))
+                         sumw2))
+               ((= (uniq ndims) 2)
+                (pmethod (typecast (pointer TH2D)
+                                   (uniq hist))
+                         sumw2))
+               ((= (uniq ndims) 3)
+                (pmethod (typecast (pointer TH3D)
+                                   (uniq hist))
+                         sumw2))
+               (t
+                (pmethod (typecast (pointer THnSparseD)
+                                   (uniq hist))
+                         sumw2)))))
+         ((write_histogram (uniq hist)
+                           (uniq ndims)
+                           (str (eval (cpp-work-path (uniq hist-file))))
+                           (uniq names)))
+         (let ((result
+                (load-object 'sparse-histogram
+                             (cpp-work-path (uniq hist-file)))))
+           (delete-file (cpp-work-path (uniq hist-file)))
+           result)
+       ,@(replace-hins body))))
 
 ;; Histogram read and write functions
 

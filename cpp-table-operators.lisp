@@ -135,7 +135,7 @@ list of pathnames or strings."
                        fields-types
                        inits posts lfields
                        &rest body)
-  "Loops over table with external bindings inits and final execuation
+  "Loops over table with external bindings inits and final execution
 forms posts, executing body once per row.
 
 Any dependent lfields should always be given after their dependencies.

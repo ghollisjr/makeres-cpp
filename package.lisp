@@ -55,6 +55,7 @@
    :exe-fn
    :program
    :program-fn
+   :*cpp-compile-flags*
 
    ;; ROOT tables
    :root-table

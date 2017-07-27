@@ -155,7 +155,7 @@ flags must be a string of compile & link flags for your C++ compiler."
     `(progn
        (defheader ,fnames ,provided
          ,@(when flags
-                 (list :flags flags)))
+             (list :flags flags)))
        ,@defcpps)))
 
 (defun defcheader-fn (fnames provided
@@ -188,7 +188,7 @@ compiler."
     `(progn
        (defcheader ,fnames ,provided
          ,@(when flags
-                 (list :flags flags)))
+             (list :flags flags)))
        ,@defcpps)))
 
 (defun generate-cpp->header ()
@@ -293,20 +293,26 @@ compiler."
                  result)))
       (rec form))))
 
+(defparameter *cpp-compile-flags*
+  "-std=c++11"
+  "Default compilation flags for all C++ programs")
+
 (defun compile-flags (cpp)
   "Returns all compilation flags required by code form cpp"
   (let ((headers (required-headers cpp))
         (cheaders (required-cheaders cpp)))
-    (format nil "~{~a~^ ~}"
-            (remove ""
-                    (append (mapcar (lambda (h)
-                                      (destructuring-bind (&key flags provided)
-                                          (gethash h *headers*)
-                                        flags))
-                                    headers)
-                            (mapcar (lambda (ch)
-                                      (destructuring-bind (&key flags provided)
-                                          (gethash ch *cheaders*)
-                                        flags))
-                                    cheaders))
-                    :test #'equal))))
+    (format
+     nil "~a ~{~a~^ ~}"
+     *cpp-compile-flags*
+     (remove ""
+             (append (mapcar (lambda (h)
+                               (destructuring-bind (&key flags provided)
+                                   (gethash h *headers*)
+                                 flags))
+                             headers)
+                     (mapcar (lambda (ch)
+                               (destructuring-bind (&key flags provided)
+                                   (gethash ch *cheaders*)
+                                 flags))
+                             cheaders))
+             :test #'equal))))
