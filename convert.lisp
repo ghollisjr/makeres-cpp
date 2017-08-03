@@ -148,3 +148,53 @@ with root2hdf script"
 
 (defmethod cpp-loader ((obj integer))
   'read_long)
+
+;; Strings:
+(defcppfun string read_string ((var string path))
+  (var stringstream result)
+  (varcons ifstream infile
+           (method path c-str))
+  (var int state 0)
+  (var char c)
+  ;; Possible states:
+  ;;
+  ;; 0. Search for initial quote
+  ;; 1. Reading
+  ;; 2. Found escape backslash
+  ;; 3. Found ending quote
+  (while (and (>> infile c)
+              (not (= state 3)))
+    (cond
+      ((= state 0)
+       (when (= c
+                "'\"'")
+         (setf state 1)))
+      ((= state 1)
+       (cond
+         ((= c "'\\\\'")
+          (setf state 2))
+         ((= c "'\"'")
+          (setf state 3))
+         (t
+          (<< result c))))
+      ((= state 2)
+       (<< result c)
+       (setf state 1))))
+  (method infile close)
+  (return (method result stringstream.str)))
+(defcppfun string write_string
+    ((var string x)
+     (var string path))
+  (varcons ofstream outfile
+           (method path c-str))
+  (<< outfile
+      "'\"'")
+  (<< outfile
+      x
+      "'\"'"
+      endl)
+  (method outfile close)
+  (return))
+
+(defmethod cpp-loader ((obj string))
+  'read_string)

@@ -53,6 +53,15 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun replace-hins (body)
+    (flet ((safe (list min-length)
+             (let ((length (length list)))
+               (if (< length min-length)
+                   (append list
+                           (loop
+                              for i below (- min-length length)
+                              collecting 0d0))
+                   list))))
+                 
     (cond
       ((null body)
        nil)
@@ -64,21 +73,21 @@
                 ((= (uniq ndims) 1)
                  (pmethod (typecast (pointer TH1D)
                                     (uniq hist))
-                          fill ,@(subseq (rest body)
+                          fill ,@(subseq (safe (rest body) 1)
                                          0 (min 2
-                                                (length (rest body))))))
+                                                (length (safe (rest body) 1))))))
                 ((= (uniq ndims) 2)
                  (pmethod (typecast (pointer TH2D)
                                     (uniq hist))
-                          fill ,@(subseq (rest body)
+                          fill ,@(subseq (safe (rest body) 2)
                                          0 (min 3
-                                                (length (rest body))))))
+                                                (length (safe (rest body) 2))))))
                 ((= (uniq ndims) 3)
                  (pmethod (typecast (pointer TH3D)
                                     (uniq hist))
-                          fill ,@(subseq (rest body)
+                          fill ,@(subseq (safe (rest body) 3)
                                          0 (min 4
-                                                (length (rest body))))))
+                                                (length (safe (rest body) 3))))))
                 (t
                  (var double (uniq weight) 1d0)
                  (when (< (uniq ndims) ,(length rest-body))
@@ -100,7 +109,7 @@
            (mapcar (lambda (x) (replace-hins x))
                    body)))
       ((atom body)
-       body))))
+       body)))))
 
 (defmacro defcpphist-old (id src bin-specs inits &body body)
   "Defines a cpp-dotab target resulting in a C++ histogram.  Provides
@@ -1691,7 +1700,10 @@ object being filled. (uniq hist) references the result histogram."
                     (sqrt
                      (pmethod h
                               get-bin-error2
-                              (+ i 1)))))
+                              ;; Old:
+                              ;; (+ i 1)
+                              i
+                              ))))
           (var (pointer int) indices
                (new[] int ndims))
           (pmethod h get-bin-content
@@ -2422,7 +2434,10 @@ object being filled. (uniq hist) references the result histogram."
                     (sqrt
                      (pmethod h
                               get-bin-error2
-                              (+ i 1)))))
+                              ;; Old:
+                              ;; (+ i 1)
+                              i
+                              ))))
           (var (pointer int) indices
                (new[] int ndims))
           (pmethod h get-bin-content
@@ -2565,6 +2580,99 @@ object being filled. (uniq hist) references the result histogram."
   (delete[] count)
   (delete[] xs)
   )
+
+;; Utility function for easily accessing the value of a histogram at a
+;; given point
+(defcppfun double hist_point_ref
+    ((var (pointer void) hist)
+     (var (pointer (vector double)) point))
+  (var (const int) ndims (pmethod point size))
+  (vararray (pointer taxis) axes (ndims))
+  (vararray int indices (ndims))
+  (var int binindex)
+  (cond
+    ((= ndims 1)
+     (var (pointer TH1D) h
+          (typecast (pointer TH1D) hist))
+     (setf (aref axes 0)
+           (pmethod h x-axis))
+
+     (for (var int i 0)
+          (< i ndims)
+          (incf i)
+          (setf (aref indices i)
+                (pmethod (aref axes i)
+                         find-bin
+                         (aref (value point) i))))
+     
+     (setf binindex
+           (pmethod h get-bin
+                    (aref indices 0)))
+     (return (pmethod h get-bin-content binindex)))
+    ((= ndims 2)
+     (var (pointer TH2D) h
+          (typecast (pointer TH2D) hist))
+     (setf (aref axes 0)
+           (pmethod h x-axis))
+     (setf (aref axes 1)
+           (pmethod h y-axis))
+
+     (for (var int i 0)
+          (< i ndims)
+          (incf i)
+          (setf (aref indices i)
+                (pmethod (aref axes i)
+                         find-bin
+                         (aref (value point) i))))
+
+     (setf binindex
+           (pmethod h get-bin
+                    (aref indices 0)
+                    (aref indices 1)))
+     (return (pmethod h get-bin-content binindex)))
+    ((= ndims 3)
+     (var (pointer TH3D) h
+          (typecast (pointer TH3D) hist))
+     (setf (aref axes 0)
+           (pmethod h x-axis))
+     (setf (aref axes 1)
+           (pmethod h y-axis))
+     (setf (aref axes 2)
+           (pmethod h z-axis))
+
+     (for (var int i 0)
+          (< i ndims)
+          (incf i)
+          (setf (aref indices i)
+                (pmethod (aref axes i)
+                         find-bin
+                         (aref (value point) i))))
+     
+     (setf binindex
+           (pmethod h get-bin
+                    (aref indices 0)
+                    (aref indices 1)
+                    (aref indices 2)))
+     (return (pmethod h get-bin-content binindex)))
+    (t
+     (var (pointer THnSparseD) h
+          (typecast (pointer THnSparseD) hist))
+     (for (var int dim 0) (< dim ndims) (incf dim)
+          (setf (aref axes dim)
+                (pmethod h get-axis
+                         dim)))
+
+     (for (var int i 0)
+          (< i ndims)
+          (incf i)
+          (setf (aref indices i)
+                (pmethod (aref axes i)
+                         find-bin
+                         (aref (value point) i))))
+     (setf binindex
+           (pmethod h get-bin indices))
+     
+     (return (pmethod h get-bin-content binindex)))))
 
 ;; C++ conversion methods
 

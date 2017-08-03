@@ -98,6 +98,7 @@
    :read_histogram
    :write_histogram
    :write_histogram_float
+   :hist_point_ref
    :write-histogram-to-rootfile
    :read-histogram-from-rootfile
    ;; lists
@@ -109,6 +110,9 @@
    :write_float
    :read_long
    :write_long
+   ;; strings
+   :read_string
+   :write_string
 
    ;; ROOT symbols
    ;; :fill
