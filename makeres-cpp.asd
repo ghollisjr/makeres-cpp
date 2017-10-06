@@ -85,4 +85,7 @@
                (:file "hdf")
                ;; ROOT
                (:file "root")
+
+               ;; Serializing data for C++ to and from Lisp
+               (:file "serialize")
                ))
