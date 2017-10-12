@@ -41,6 +41,7 @@
 (defcpp power (x)
   (format nil "TMath::Power(~a)"
           (cpp x)))
+(defcpp root-eval () "Eval")
 
 ;;; Histogram methods
 
@@ -89,12 +90,18 @@
   "GetZaxis")
 
 (defparameter *root-flags*
+  (string-append
+   ;; Basic flags:
   (remove #\Newline
           (with-output-to-string (out)
             (external-program:run "root-config"
                                   (list "--cflags"
                                         "--libs")
-                                  :output out))))
+                                  :output out)))
+  " "
+  ;; MathMore:
+  "-lMathMore"
+  ))
 
 ;; macro for making this easier
 (defmacro with-root-header (&rest args)
@@ -103,6 +110,11 @@
 ;;;; Mathematics
 (defheader "TMath.h"
     (power))
+
+;;;; MathMore:
+;; Interpolation:
+(with-root-header "Math/Interpolator.h"
+  ((defcpp root-interpolator () "ROOT::Math::Interpolator")))
 
 ;;;; Axes
 (defheader "TAxis.h"
