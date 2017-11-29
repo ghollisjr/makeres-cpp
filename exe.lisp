@@ -37,10 +37,11 @@ forms"
                                'function))
                          top-level-forms))
          (implicit-function-forms
-          (mapcar (lambda (fsym)
-                    (destructuring-bind (&key type cpp-args body)
-                        (gethash fsym *cpp-funs*)
-                      `(function ,type ,fsym ,cpp-args ,@body)))
+          (mapcar #'definition
+                  ;; (lambda (fsym)
+                  ;;   (destructuring-bind (&key type cpp-args body)
+                  ;;       (gethash fsym *cpp-funs*)
+                  ;;     `(function ,type ,fsym ,cpp-args ,@body)))
                   required-functions))
          (function-forms (append implicit-function-forms
                                  explicit-function-forms))

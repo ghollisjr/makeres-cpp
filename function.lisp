@@ -129,6 +129,12 @@ program's code."
                 #'eq)))
       (rec code))))
 
+(defun definition (fsym)
+  "Returns C++ code for the definition of a function."
+  (destructuring-bind (&key type cpp-args body)
+      (gethash fsym *cpp-funs*)
+    `(function ,type ,fsym ,cpp-args ,@body)))
+
 (defun prototype (function-code)
   "Returns C++ code for the prototype of a function definition"
   (with-output-to-string (out)
