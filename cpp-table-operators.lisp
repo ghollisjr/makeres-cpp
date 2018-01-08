@@ -239,16 +239,23 @@ targets manually (usually more conceptually clear incidentally)."
                       appending
                       ;; need handler-case here detecting destructuring
                       ;; bind failure
-                        (destructuring-bind (type &rest counts)
-                            (gethash (keywordify field) field->type)
-                          `((var (pointer ,type) ,symbol
-                                 ,(if counts
-                                      `(new[] ,type ,@counts)
-                                      `(new ,type)))
-                            (method ,tab
-                                    set-branch-address
-                                    (str ,(string field))
-                                    ,symbol))))
+                        (handler-case
+                            (destructuring-bind (type &rest counts)
+                                (gethash (keywordify field) field->type)
+                              `((var (pointer ,type) ,symbol
+                                     ,(if counts
+                                          `(new[] ,type ,@counts)
+                                          `(new ,type)))
+                                (method ,tab
+                                        set-branch-address
+                                        (str ,(string field))
+                                        ,symbol)))
+                          #+sbcl
+                          (sb-kernel::arg-count-error ()
+                            (error "Field ~a not found in cpp-table"
+                                   field))
+                          )
+                        )
                  ;; Initialization
                  (var long nrows
                       (method ,tab
