@@ -43,7 +43,13 @@ forms"
                   ;;       (gethash fsym *cpp-funs*)
                   ;;     `(function ,type ,fsym ,cpp-args ,@body)))
                   required-functions))
+         (alt-function-forms
+          (loop
+             for rf in required-functions
+             appending
+               (altdefinitions rf)))
          (function-forms (append implicit-function-forms
+                                 alt-function-forms
                                  explicit-function-forms))
          (prototypes
           (mapcar #'prototype function-forms))
@@ -77,7 +83,13 @@ top-level forms preceded by any required headers"
                         (gethash fsym *cpp-funs*)
                       `(function ,type ,fsym ,cpp-args ,@body)))
                   required-functions))
+         (alt-function-forms
+          (loop
+             for rf in required-functions
+             appending
+               (altdefinitions rf)))
          (function-forms (append implicit-function-forms
+                                 alt-function-forms
                                  explicit-function-forms))
          (prototypes
           (mapcar #'prototype function-forms))
@@ -166,9 +178,15 @@ strings used as additional arguments to the compiler/linker."
                   (let ((rf
                          (split-sequence:split-sequence #\space
                                                         required-flags)))
-                    (if (equal rf '(""))
-                        ()
-                        rf))
+                    (remove "" rf :test #'equal)
+                    ;; Used to be this, but I found that I needed to
+                    ;; remove empty strings after adding the
+                    ;; defcppaltfun ability.
+                    ;; 
+                    ;; (if (equal rf '(""))
+                    ;;     ()
+                    ;;     rf)
+                    )
                   (list "-o" exe-path source-path))))
               :output *standard-output*
               :error error)

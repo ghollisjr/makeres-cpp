@@ -25,6 +25,10 @@
   (make-hash-table :test 'eq)
   "Map from C++ function symbol to code")
 
+(defparameter *cpp-alt-funs*
+  (make-hash-table :test 'eq)
+  "Map from C++ function symbol to alternative definitions")
+
 (defparameter *explicit-funs*
   (make-hash-table :test 'equal)
   "Map from C++ function symbol to explicit function symbol
@@ -55,6 +59,25 @@ program's code."
 
 (defmacro undefcppfun (fname)
   `(remhash ',fname *cpp-funs*))
+
+(defmacro defcppaltfun (type fname cpp-args &body body)
+  (alexandria:with-gensyms (fnam typ cas bod altfuns)
+    `(let ((,typ ',type)
+           (,fnam ',fname)
+           (,cas ',cpp-args)
+           (,bod ',body))
+       (symbol-macrolet ((,altfuns (gethash ,fnam
+                                            *cpp-alt-funs*)))
+         (setf ,altfuns
+               (adjoin 
+                (list :type ,typ
+                      :cpp-args ,cas
+                      :body ,bod)
+                ,altfuns
+                :test #'equal))))))
+
+(defun undefcppaltfuns (fname)
+  (setf (gethash fname *cpp-alt-funs*) nil))
 
 ;; (defun required-functions (code)
 ;;   "Returns list of required functions for code"
@@ -144,3 +167,23 @@ program's code."
               (cpp type)
               (cpp fname)
               (mapcar #'cpp cpp-args)))))
+
+(defun altdefinitions (fsym)
+  (loop
+     for def in (gethash fsym *cpp-alt-funs*)
+     collecting
+       (destructuring-bind (&key type cpp-args body)
+           def
+         `(function ,type ,fsym ,cpp-args ,@body))))
+
+(defun altprototypes (altdefs)
+  (loop
+     for function-code in altdefs
+     collecting
+       (with-output-to-string (out)
+         (destructuring-bind (type fname cpp-args &rest body)
+             (rest function-code)
+           (format out "~a ~a(~{~a~^,~})"
+                   (cpp type)
+                   (cpp fname)
+                   (mapcar #'cpp cpp-args))))))

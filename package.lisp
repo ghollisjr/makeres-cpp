@@ -39,6 +39,9 @@
    :undefcppfun
    :defrawcppfun ; supports explicit dependencies
    :deffilecppfun ; like defrawcppfun but uses file for body string
+   ;; Defining different variants on the same function name:
+   :defcppaltfun ; Defines alternative cpp function
+   :undefcppaltfuns ; Undefines all alternative cpp functions
 
    ;; Define explicit function dependencies for a function symbol:
    :set-explicit-cpp-functions
