@@ -846,7 +846,7 @@ true when given the key and value from ht."
 
 (defun cpptrans (target-table)
   "Performs necessary graph transformations for table operators"
-  (reset-memo-map #'immediate-reductions)
+  (reset-memo-map #'immediate-reductions-map)
   ;; reset gsym map:
   (reset-gsym)
   ;; initialize operator expansion
