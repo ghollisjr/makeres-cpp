@@ -138,3 +138,13 @@
 (defcpp concat (&rest forms)
   (apply #'string-append
          (mapcar #'cpp forms)))
+
+;; Lambda functions from C++11:
+;;
+;; Use strings as necessary in the capture clause to express precise
+;; meaning.
+(defcpp lambda (capture-clauses args &body body)
+  (format nil "[~{~a~^,~}](~{~a~^,~})~%{~{~a;~%~}}"
+          (mapcar #'cpp capture-clauses)
+          (mapcar #'cpp args)
+          (mapcar #'cpp body)))

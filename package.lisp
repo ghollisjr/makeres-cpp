@@ -97,6 +97,7 @@
    :root2hdf
 
    ;;; C++ Functions
+   :cpp-loader
    ;; histograms
    :read_histogram
    :write_histogram
@@ -104,6 +105,9 @@
    :hist_point_ref
    :write-histogram-to-rootfile
    :read-histogram-from-rootfile
+   ;; basic conversions:
+   :read_file
+   :replace_fd
    ;; lists
    :read_list
    ;; numbers

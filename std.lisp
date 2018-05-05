@@ -132,6 +132,8 @@
 
 (defcpp push-back ()
   "push_back")
+(defcpp resize ()
+  "resize")
 
 ;; iomanip functions:
 
