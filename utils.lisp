@@ -76,7 +76,7 @@ remaining arguments in the form for lists.  If there is no defined
 operator corresponding to the first element of the list, standard
 function call notation is assumed and the symbol is downcased as a
 string for the function name."
-  (let ((*print-pretty* t))
+  (let ((*print-pretty* nil))
     (handler-case
         (when form
           (let ((sym->fn *opsymbol->opfunction*))
@@ -108,7 +108,9 @@ string for the function name."
                        (format nil "~a(~{~a~^,~})"
                                (string-downcase (string first))
                                (mapcar #'cpp (rest form))))))))
-      (error (err) (error "(cpp ~a):~%~a" form err)))))
+      ;; (error (err) (error "(cpp ~a):~%~a" form err))
+      (error (err) (error "~a" err))
+      )))
 
 (defgeneric lisp->cpp (lisp-object &rest args)
   (:documentation "Generates a C++ string for the Lisp object.  args
