@@ -102,14 +102,15 @@ result table)."
   the Lisp object to return and returning it as the output value."
   nil)
 
-(defun cpp-srctab (paths name &optional bootstrap)
+(defun cpp-srctab (paths name &key bootstrap fields-types)
   "Returns ROOT table object for use as source table.  paths can be a
 list of pathnames or strings."
   (declare (ignore bootstrap))
   (let ((paths (mapcar #'namestring paths)))
     (make-root-table :paths paths
-                     :fields-types
-                     (read-fields-types paths name)
+                     :fields-types (if fields-types
+                                       fields-types
+                                       (read-fields-types paths name))
                      :nrows (read-nrows paths name)
                      :name name)))
 

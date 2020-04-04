@@ -29,7 +29,7 @@
   (with-output-to-string (out)
     (if (single forms)
         (format out "(-~a)" (cpp (first forms)))
-        (format out "(~{~a~^-~})" (mapcar #'cpp forms)))))
+        (format out "(~{(~a)~^-~})" (mapcar #'cpp forms)))))
 
 (defcpp * (&rest forms)
   (with-output-to-string (out)
