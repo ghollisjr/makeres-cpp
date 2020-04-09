@@ -26,6 +26,7 @@
 (defcpp fill () "Fill")
 (defcpp add () "Add")
 (defcpp write () "Write")
+(defcpp set-directory () "SetDirectory")
 ;; have to make different token due to close in fstream
 (defcpp root-close () "Close")
 (defcpp fit () "Fit") ; don't think I'll use it, but ok
