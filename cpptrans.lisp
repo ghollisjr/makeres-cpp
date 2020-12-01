@@ -862,7 +862,9 @@ true when given the key and value from ht."
   (when (not (gethash (project) *proj->cpp-tab->lfields*))
     (setf (gethash (project) *proj->cpp-tab->lfields*)
           (make-hash-table :test 'equal)))
-  (let* ((graph (copy-target-table target-table))
+  (let* ((graph (if *copy-target-table-p*
+                    (copy-target-table target-table)
+                    target-table))
          ;; chained reduction and ltab chain edge maps
          (chained-edge-map
           (chained-edge-map graph
